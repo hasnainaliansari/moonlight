@@ -1,0 +1,241 @@
+/* ===========================
+   PRIVACY PAGE – MOONLIGHT
+   =========================== */
+
+.ml-privacy-root {
+  width: 100%;
+}
+
+.ml-privacy-main {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+/* ---------- HERO ---------- */
+
+.ml-privacy-hero {
+  border-radius: 24px;
+  padding: 24px;
+  background: radial-gradient(circle at 0% 0%, #22c55e33, transparent 45%),
+    radial-gradient(circle at 100% 100%, #0ea5e933, transparent 55%),
+    linear-gradient(135deg, #022c22, #020617 60%, #0f172a 100%);
+  color: #e5f9f4;
+  box-shadow: 0 32px 80px rgba(15, 23, 42, 0.5);
+}
+
+.ml-privacy-hero-inner {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+  gap: 28px;
+  align-items: stretch;
+}
+
+.ml-privacy-pill {
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #a7f3d0;
+  margin-bottom: 8px;
+}
+
+.ml-privacy-heading {
+  font-size: 28px;
+  line-height: 1.25;
+  margin: 0 0 10px;
+}
+
+.ml-privacy-sub {
+  font-size: 14px;
+  color: #d1fae5;
+  max-width: 520px;
+}
+
+.ml-privacy-updated {
+  margin-top: 12px;
+  font-size: 12px;
+  color: #a7f3d0;
+}
+
+.ml-privacy-updated span {
+  color: #ecfeff;
+}
+
+/* hero right */
+
+.ml-privacy-hero-right {
+  display: flex;
+  justify-content: flex-end;
+  align-items: stretch;
+}
+
+.ml-privacy-hero-card {
+  max-width: 360px;
+  width: 100%;
+  border-radius: 20px;
+  padding: 18px 18px 14px;
+  background: rgba(15, 23, 42, 0.9);
+  border: 1px solid rgba(148, 163, 184, 0.6);
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+}
+
+.ml-privacy-hero-card-title {
+  font-size: 16px;
+  margin: 0 0 8px;
+  color: #f9fafb;
+}
+
+.ml-privacy-hero-list {
+  margin: 0 0 8px;
+  padding-left: 18px;
+  font-size: 13px;
+  color: #e5e7eb;
+}
+
+.ml-privacy-hero-list li + li {
+  margin-top: 3px;
+}
+
+.ml-privacy-hero-note {
+  font-size: 11px;
+  color: #9ca3af;
+  margin: 0;
+}
+
+/* ---------- MAIN CONTENT ---------- */
+
+.ml-privacy-content {
+  margin-top: 6px;
+}
+
+.ml-privacy-layout {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  gap: 24px;
+}
+
+/* aside */
+
+.ml-privacy-aside {
+  background: #f9fafb;
+  border-radius: 18px;
+  padding: 14px 14px 12px;
+  border: 1px solid #e5e7eb;
+  font-size: 13px;
+}
+
+.ml-privacy-aside-title {
+  font-size: 13px;
+  font-weight: 600;
+  margin: 0 0 6px;
+  color: #022c22;
+}
+
+.ml-privacy-aside-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.ml-privacy-aside-list li + li {
+  margin-top: 4px;
+}
+
+.ml-privacy-aside-list a {
+  color: #0f766e;
+  text-decoration: none;
+  font-size: 12px;
+}
+
+.ml-privacy-aside-list a:hover {
+  text-decoration: underline;
+}
+
+/* body */
+
+.ml-privacy-body {
+  background: #ffffff;
+  border-radius: 20px;
+  padding: 18px 18px 20px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+  font-size: 13px;
+  color: #111827;
+}
+
+.ml-privacy-section + .ml-privacy-section {
+  margin-top: 16px;
+}
+
+.ml-privacy-section-title {
+  font-size: 16px;
+  margin: 0 0 6px;
+  color: #022c22;
+}
+
+.ml-privacy-body p {
+  margin: 0 0 8px;
+  line-height: 1.55;
+  color: #374151;
+}
+
+.ml-privacy-list {
+  margin: 0 0 6px 16px;
+  padding: 0;
+}
+
+.ml-privacy-list li {
+  margin-bottom: 4px;
+  color: #374151;
+}
+
+.ml-privacy-contact-block {
+  background: #f1f5f9;
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 12px;
+  color: #111827;
+}
+
+.ml-privacy-contact-block a {
+  color: #0f766e;
+  text-decoration: none;
+}
+
+.ml-privacy-contact-block a:hover {
+  text-decoration: underline;
+}
+
+.ml-privacy-final-note {
+  margin-top: 10px;
+  font-size: 12px;
+  color: #4b5563;
+}
+
+/* ---------- RESPONSIVE ---------- */
+
+@media (max-width: 900px) {
+  .ml-privacy-hero-inner {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .ml-privacy-hero-right {
+    justify-content: flex-start;
+  }
+
+  .ml-privacy-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .ml-privacy-hero {
+    padding: 18px 14px;
+    border-radius: 18px;
+  }
+
+  .ml-privacy-body {
+    padding: 14px 12px 16px;
+  }
+}

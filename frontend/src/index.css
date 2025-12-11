@@ -1,0 +1,30 @@
+/* Global reset + layout fix */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;              /* 👈 body ka default margin hat gaya (white gap ka reason) */
+  padding: 0;
+  height: 100%;
+}
+
+body {
+  background-color: #020617;  /* same dark bg as app */
+  color: #e5e7eb;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+#root {
+  min-height: 100vh;
+  width: 100%;
+}
+
+/* optional: horizontal scroll band ho jaye */
+body {
+  overflow-x: hidden;
+}
