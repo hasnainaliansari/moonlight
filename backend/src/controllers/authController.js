@@ -32,6 +32,52 @@ const generateToken = (userId, role) => {
 };
 
 /**
+ * Helper: ensure a Guest record exists for a guest user
+ * - Only runs for role === 'guest'
+ * - Safe: does NOT break main flow on error
+ */
+async function ensureGuestForUser(user, extra = {}) {
+  try {
+    if (!user || user.role !== "guest" || !user.email) return null;
+
+    const email = user.email.toLowerCase().trim();
+    const fullName = user.name || email.split("@")[0];
+    const phone = extra.phone || undefined;
+
+    let guest = await Guest.findOne({ email });
+
+    if (!guest) {
+      guest = await Guest.create({
+        fullName,
+        email,
+        phone,
+        isActive: true,
+      });
+    } else {
+      // Optional: keep guest name up to date if empty
+      let changed = false;
+      if (!guest.fullName && fullName) {
+        guest.fullName = fullName;
+        changed = true;
+      }
+      if (phone && !guest.phone) {
+        guest.phone = phone;
+        changed = true;
+      }
+      if (changed) {
+        await guest.save();
+      }
+    }
+
+    return guest;
+  } catch (err) {
+    console.error("ensureGuestForUser error:", err.message);
+    // don't throw – auth flow should still work
+    return null;
+  }
+}
+
+/**
  * Helper: create or fetch user from social profile
  */
 async function findOrCreateOAuthUser({ email, name, provider, providerId }) {
@@ -112,17 +158,8 @@ const register = async (req, res) => {
       authProvider: "local",
     });
 
-    // Also create a record in Guest collection (if it doesn't already exist)
-    let guest = await Guest.findOne({ email: normalizedEmail });
-
-    if (!guest) {
-      guest = await Guest.create({
-        fullName: name,
-        email: normalizedEmail,
-        phone,
-        isActive: true,
-      });
-    }
+    // Ensure Guest record exists for this guest user
+    await ensureGuestForUser(user, { phone });
 
     const token = generateToken(user._id, user.role);
 
@@ -175,6 +212,9 @@ const login = async (req, res) => {
       email: user.email,
       role: user.role,
     };
+
+    // 🔹 Make sure a Guest record exists for guest users
+    await ensureGuestForUser(user);
 
     // 🔹 Login notification email
     sendLoginAlertEmail({
@@ -401,6 +441,9 @@ const oauthLogin = async (req, res) => {
         .status(403)
         .json({ message: "Account is disabled. Please contact support." });
     }
+
+    // Ensure guest profile exists for OAuth guest users
+    await ensureGuestForUser(user);
 
     const token = generateToken(user._id, user.role);
 
