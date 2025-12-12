@@ -6,7 +6,7 @@
   min-height: 100vh;
   background: #fdf1e2;
   display: flex;
-  align-items: center;          /* shell ko vertical center pe rakho */
+  align-items: center;          /* Keep the shell vertically centered */
   justify-content: center;
   padding: 24px 16px;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
@@ -23,7 +23,7 @@
   overflow: hidden;
   box-shadow: 0 32px 90px rgba(15, 23, 42, 0.25);
 
-  /* 👇 overall card height: desktop par fix-ish screen ke andar */
+  /* 👇 Overall card height: fixed-ish inside the desktop viewport */
   height: clamp(560px, 80vh, 720px);
 }
 
@@ -37,7 +37,7 @@
   padding: 24px 32px 28px;
   background: #ffffff;
 
-  /* 👇 signup jaisi lambi form ho to sirf left panel scroll kare */
+  /* 👇 If the form is long (like signup), only the left panel should scroll */
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
 
@@ -358,8 +358,8 @@
 .auth-video-shell {
   position: relative;
   width: 100%;
-  height: 100%;       /* card ke jitni height */
-  min-height: 0;      /* clamp se aa rahi height ko respect kare */
+  height: 100%;       /* Same height as the card */
+  min-height: 0;      /* Respect the height coming from clamp() */
 }
 
 .auth-video {
@@ -502,11 +502,11 @@
 
   .auth-shell {
     grid-template-columns: minmax(0, 1fr);
-    height: auto;             /* mobile pe normal scroll */
+    height: auto;             /* Normal scrolling on mobile */
   }
 
   .auth-left {
-    overflow: visible;        /* mobile pe inside scroll ki zaroorat nahi */
+    overflow: visible;        /* No need for inner scroll on mobile */
     padding: 20px 18px 24px;
   }
 

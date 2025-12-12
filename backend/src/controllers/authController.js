@@ -44,7 +44,7 @@ async function findOrCreateOAuthUser({ email, name, provider, providerId }) {
   let user = await User.findOne({ email: normalizedEmail });
 
   if (!user) {
-    // Random password – user direct use nahi karega, sirf schema ke liye
+    // Random password – user will not use it directly, it's only for schema requirements
     const randomPassword =
       Math.random().toString(36).slice(-10) + Date.now().toString(36);
 
@@ -57,10 +57,10 @@ async function findOrCreateOAuthUser({ email, name, provider, providerId }) {
       providerId,
     });
 
-    // welcome email bhej do (fire-and-forget)
+    // Send welcome email (fire-and-forget)
     sendWelcomeEmail({ name: user.name, email: user.email });
   } else {
-    // pehle se user hai – provider info update kar lo (optional)
+    // User already exists – update provider info (optional)
     let changed = false;
 
     if (!user.authProvider || user.authProvider === "local") {
@@ -103,7 +103,7 @@ const register = async (req, res) => {
         .json({ message: "User with this email already exists" });
     }
 
-    // Hamesha guest role hi, staff ke liye /api/users use karo
+    // Always assign guest role; for staff use /api/users
     const user = await User.create({
       name,
       email: normalizedEmail,
@@ -112,7 +112,7 @@ const register = async (req, res) => {
       authProvider: "local",
     });
 
-    // Guest collection mein bhi record banao (agar pehle se nahi hai)
+    // Also create a record in Guest collection (if it doesn't already exist)
     let guest = await Guest.findOne({ email: normalizedEmail });
 
     if (!guest) {
@@ -306,7 +306,7 @@ const resetPassword = async (req, res) => {
       return res.status(400).json({ message: "User not found" });
     }
 
-    user.password = newPassword; // pre-save hook will hash
+    user.password = newPassword; // pre-save hook will hash it
     await user.save();
 
     passwordResetStore.delete(normalizedEmail);
@@ -374,8 +374,8 @@ const oauthLogin = async (req, res) => {
         providerId: data.id,
       };
     } else if (provider === "apple") {
-      // NOTE: Apple verification thoda complex hai.
-      // Production ke liye 'apple-signin-auth' jaisi library use karo.
+      // NOTE: Apple verification is a bit complex.
+      // For production, use a library like 'apple-signin-auth'.
       return res
         .status(400)
         .json({ message: "Apple OAuth not implemented yet" });

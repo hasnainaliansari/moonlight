@@ -9,7 +9,7 @@ const {
 
 const router = express.Router();
 
-// sab profile routes ke liye login required
+// Login required for all profile routes
 router.use(protect);
 
 router.get("/me", getMyProfile);

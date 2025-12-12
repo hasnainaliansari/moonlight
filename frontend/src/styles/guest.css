@@ -1169,16 +1169,6 @@
 
 
 
-
-
-
-
-
-
-
-
-
-
 /* ===========================
    RESPONSIVE
    =========================== */
@@ -2613,7 +2603,7 @@
 .g-room-book-input[type="date"] {
   padding-right: 10px;
   color-scheme: light;
-  accent-color: #fbbf24; /* kuch browsers pe selection colour ke liye */
+  accent-color: #fbbf24;
 }
 
 .g-room-book-input[type="date"]::-webkit-calendar-picker-indicator {

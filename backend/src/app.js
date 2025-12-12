@@ -20,8 +20,8 @@ const profileRoutes = require("./routes/profileRoutes");
 const app = express();
 
 /**
- * 🔥 CORS – allow all origins (front-end Vercel + local dono).
- * Cookies use nahi ho rahe, isliye yeh theek hai.
+ * 🔥 CORS – allow all origins (both front-end Vercel + local).
+ * Cookies are not being used, so this is fine.
  */
 app.use(
   cors({
@@ -31,7 +31,7 @@ app.use(
   })
 );
 
-// ❌ ye line hata do (yehi crash ka cause tha)
+// ❌ Remove this line (this was the cause of the crash)
 // app.options("*", cors());
 
 app.use(express.json());

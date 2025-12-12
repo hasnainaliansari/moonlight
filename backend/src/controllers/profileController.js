@@ -5,7 +5,7 @@ const Booking = require("../models/Booking");
 const Review = require("../models/Review");
 
 // GET /api/profile/me
-// Logged-in user ka profile + guest details + bookings + reviews
+// Logged-in user's profile + guest details + bookings + reviews
 const getMyProfile = async (req, res) => {
   try {
     const user = await User.findById(req.user.id).select("-password");
@@ -37,7 +37,7 @@ const getMyProfile = async (req, res) => {
         role: user.role,
         createdAt: user.createdAt,
       },
-      guest,       // full guest doc (address, city, country, etc.)
+      guest, // full guest doc (address, city, country, etc.)
       bookings,
       reviews,
     });
@@ -48,7 +48,7 @@ const getMyProfile = async (req, res) => {
 };
 
 // PATCH /api/profile/me
-// Name + contact / address fields update
+// Update name + contact / address fields
 const updateMyProfile = async (req, res) => {
   try {
     const { name, phone, address, city, country, preferences } = req.body;
@@ -61,7 +61,7 @@ const updateMyProfile = async (req, res) => {
     if (name) {
       user.name = name;
     }
-    // email change abhi allow nahin kar rahe – simple rakhte hain
+    // Email change is not allowed for now – keeping it simple
     await user.save();
 
     const email = user.email.toLowerCase();
@@ -90,7 +90,7 @@ const updateMyProfile = async (req, res) => {
 
     await guest.save();
 
-    // fresh profile bhejte hain
+    // Send fresh profile back
     const bookings = await Booking.find({ guestEmail: email })
       .populate("room", "roomNumber type")
       .sort({ checkInDate: -1 });

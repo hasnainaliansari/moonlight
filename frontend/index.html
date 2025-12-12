@@ -2,10 +2,84 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <!-- <link rel="icon" type="image/x-icon" href="/favicon.ico" /> -->
+
+    <!-- Viewport -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>frontend</title>
+
+    <!-- Primary SEO -->
+    <title>Moonlight Resort &amp; Suites | Boutique Coastal Hotel &amp; Luxury Rooms</title>
+    <meta
+      name="description"
+      content="Moonlight Resort &amp; Suites is a boutique-style stay offering modern rooms, ocean-inspired suites and curated amenities. Enjoy luxury bedding, high-speed Wi-Fi, in-room dining and 24/7 concierge support for business trips, weekend escapes and long retreats."
+    />
+    <meta
+      name="keywords"
+      content="Moonlight Resort, Moonlight Resort & Suites, boutique hotel, luxury hotel, oceanfront rooms, resort & suites, business stay, weekend getaway, family friendly hotel"
+    />
+    <meta name="robots" content="index,follow" />
+    <meta name="author" content="Moonlight Resort &amp; Suites" />
+
+    <!-- Canonical URL (update if your production domain is different) -->
+    <link rel="canonical" href="https://moonlightresort.com/" />
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Moonlight Resort &amp; Suites" />
+    <meta property="og:title" content="Moonlight Resort &amp; Suites | Discover Excellence in Hospitality" />
+    <meta
+      property="og:description"
+      content="From cozy rooms and curated amenities to thoughtful service, Moonlight turns simple stays into memorable experiences. Book your next getaway with Moonlight Resort &amp; Suites."
+    />
+    <meta property="og:url" content="https://moonlightresort.com/" />
+    <!-- Replace with a real hero image URL later -->
+    <meta
+      property="og:image"
+      content="https://moonlightresort.com/images/og-moonlight-resort.jpg"
+    />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Moonlight Resort &amp; Suites | Boutique Coastal Hotel" />
+    <meta
+      name="twitter:description"
+      content="Book ocean-inspired rooms, suites and villas with luxury bedding, Wi-Fi everywhere and 24/7 concierge support at Moonlight Resort &amp; Suites."
+    />
+    <meta
+      name="twitter:image"
+      content="https://moonlightresort.com/images/og-moonlight-resort.jpg"
+    />
+
+    <!-- Theme color (mobile address bar color) -->
+    <meta name="theme-color" content="#f4e8da" />
+
+    <!-- Structured Data (JSON-LD) -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Hotel",
+        "name": "Moonlight Resort & Suites",
+        "url": "https://moonlightresort.com/",
+        "description": "Moonlight is a boutique-style resort and hotel combining resort-level amenities, hotel convenience and a calm retreat-like atmosphere for workcations, weekends and extended stays.",
+        "telephone": "+1-555-123-4567",
+        "email": "stay@moonlightresort.com",
+        "image": "https://moonlightresort.com/images/og-moonlight-resort.jpg",
+        "priceRange": "$$",
+        "amenityFeature": [
+          { "@type": "LocationFeatureSpecification", "name": "High-speed Wi-Fi throughout", "value": true },
+          { "@type": "LocationFeatureSpecification", "name": "In-room dining & on-site café", "value": true },
+          { "@type": "LocationFeatureSpecification", "name": "Pool, deck & quiet corners", "value": true },
+          { "@type": "LocationFeatureSpecification", "name": "Business-ready rooms & meeting spaces", "value": true },
+          { "@type": "LocationFeatureSpecification", "name": "24/7 concierge support", "value": true },
+          { "@type": "LocationFeatureSpecification", "name": "Parking & local transfers", "value": true }
+        ]
+      }
+    </script>
   </head>
+
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>

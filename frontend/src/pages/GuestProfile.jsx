@@ -73,7 +73,7 @@ function GuestProfile() {
     load();
   }, [isAuthenticated, user]);
 
-  // Jab profile load ho jaye to details form ko populate karo
+  // When the profile loads, populate the details form.
   useEffect(() => {
     if (!profile || !profile.user) return;
 
@@ -203,7 +203,7 @@ function GuestProfile() {
       const res = await api.patch("/profile/me", payload);
       setProfile(res.data);
 
-      // Auth context ka user bhi update karo (name change ke liye)
+      // Also update the user in the auth context (for the name change).
       if (res.data?.user) {
         setUser((prev) =>
           prev

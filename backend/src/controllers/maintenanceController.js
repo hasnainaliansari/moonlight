@@ -47,7 +47,7 @@ const createTicket = async (req, res) => {
       assignedTo: assignedTo || null,
     });
 
-    // Populate so frontend ko turant naam / room number mil jaye
+    // Populate so the frontend can immediately get the name / room number
     await ticket.populate("room", "roomNumber type status");
     await ticket.populate("assignedTo", "name email role");
     await ticket.populate("createdBy", "name email role");

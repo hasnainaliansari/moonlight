@@ -291,7 +291,7 @@ function Invoices() {
                 <Td style={{ textTransform: "capitalize" }}>{inv.status}</Td>
                 <Td>
                   <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                    {/* 👇 NEW: Go to detail page */}
+                    {/* Go to detail page */}
                     <button
                       onClick={() => navigate(`/invoices/${inv._id}`)}
                       style={outlineBtn}

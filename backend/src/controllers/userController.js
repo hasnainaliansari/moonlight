@@ -15,7 +15,7 @@ const getStaffUsers = async (req, res) => {
     const users = await User.find({ role: { $in: STAFF_ROLES } })
       .sort({ createdAt: -1 });
 
-    // password ko expose nahi karna
+    // Do not expose the password
     const shaped = users.map((u) => ({
       id: u._id,
       name: u.name,
@@ -63,7 +63,7 @@ const createStaffUser = async (req, res) => {
     const user = await User.create({
       name,
       email,
-      password,    // hashing User model ke pre('save') se ho jayegi
+      password, // hashing will happen via User model pre('save')
       role: finalRole,
     });
 
@@ -102,9 +102,9 @@ const updateStaffUser = async (req, res) => {
       user.role = role;
     }
 
-    // agar password diya hai aur length ok hai to change kar do
+    // If a password is provided and length is OK, then update it
     if (password && password.trim().length >= 6) {
-      user.password = password.trim(); // hash pre('save') se ho ga
+      user.password = password.trim(); // hash will happen via pre('save')
     }
 
     await user.save();

@@ -1,25 +1,25 @@
 // frontend/src/utils/media.js
 
-// API base – same logic jo api.js me hai
+// API base – same logic that exists in api.js
 const rawBase =
   import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
 
-// trailing slash hata do
+// Remove trailing slash
 const API_BASE_URL = rawBase.replace(/\/+$/, "");
 
 /**
  * Production-friendly media URL resolver
  *
- * - Localhost URLs ko Railway ke base se replace karega
- * - `/uploads/...` relative paths ko full `https://backend/uploads/...` banayega
- * - Pure external URLs (Unsplash etc) ko as-is chhodega
+ * - Replaces localhost URLs with the Railway (production) base
+ * - Converts `/uploads/...` relative paths into full `https://backend/uploads/...` URLs
+ * - Leaves pure external URLs (Unsplash, etc.) unchanged
  */
 export function resolveMediaUrl(input) {
   if (!input) return input;
 
-  // Already absolute URL (http/https)
+  // Already an absolute URL (http/https)
   if (input.startsWith("http://") || input.startsWith("https://")) {
-    // Agar backend local tha to usko prod base se replace kar do
+    // If the backend URL was local, replace it with the production base
     let out = input;
     out = out.replace("http://localhost:5000", API_BASE_URL);
     out = out.replace("http://127.0.0.1:5000", API_BASE_URL);
@@ -36,9 +36,9 @@ export function resolveMediaUrl(input) {
     return `${API_BASE_URL}/${input}`;
   }
 
-  // Baaki sab as-is
+  // Everything else: return as-is
   return input;
 }
 
-// Optional default export bhi rakh dete hain
+// Optional: also keep a default export
 export default resolveMediaUrl;

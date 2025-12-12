@@ -235,7 +235,7 @@ function ForgotPassword() {
           </div>
         </div>
 
-        {/* RIGHT : same video / hero side as login */}
+        {/* Right side: use the same video/hero section as on the login page. */}
         <div className="auth-panel auth-right">
           <div className="auth-video-shell">
             <video className="auth-video" autoPlay loop muted playsInline>

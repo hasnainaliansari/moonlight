@@ -3,7 +3,7 @@ import { useEffect, useState, useRef } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
-// 👇 yahan wahi CLIENT ID daalo jo Google console se mila hai (Web application)
+// Enter the same CLIENT ID here that you got from Google Console (Web application).
 const GOOGLE_CLIENT_ID =
   "39602451122-j3ujp4tjc78meaiapn5bvjib7005lqt3.apps.googleusercontent.com";
 
@@ -12,7 +12,7 @@ function Login() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // from = user ne kis page se login open kiya (e.g. /rooms/:id)
+  // from = the page from which the user opened the login (e.g. /rooms/:id).
   const from = location.state?.from || null;
   const fromGuestBook = location.state?.fromGuestBook || false; // backward compat
 
@@ -92,7 +92,7 @@ function Login() {
         },
       });
 
-      // Google apna branded button render karega is div ke andar
+      // Google will render its branded button inside this div.
       window.google.accounts.id.renderButton(googleButtonRef.current, {
         type: "standard",
         theme: "outline",
@@ -105,7 +105,7 @@ function Login() {
 
     const scriptId = "google-gsi-script";
 
-    // agar script pehle se loaded hai
+    // If the script is already loaded.
     if (window.google && window.google.accounts && window.google.accounts.id) {
       initGoogle();
       return;
@@ -121,13 +121,13 @@ function Login() {
       script.onload = initGoogle;
       document.body.appendChild(script);
     } else {
-      // agar kisi aur component ne script add kiya hai
+      // If some other component has added a script.
       script.onload = initGoogle;
     }
 
     // cleanup optional
     return () => {
-      // yahan kuch special nahi karna – Google button rehne do
+      // Don’t do anything special here – leave the Google button as it is.
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

@@ -8,13 +8,13 @@
 
 html,
 body {
-  margin: 0;              /* 👈 body ka default margin hat gaya (white gap ka reason) */
+  margin: 0;              /*  Removed the body default margin (the cause of the white gap) */
   padding: 0;
   height: 100%;
 }
 
 body {
-  background-color: #020617;  /* same dark bg as app */
+  background-color: #020617;  /* Same dark background as the app */
   color: #e5e7eb;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
 }
@@ -24,7 +24,7 @@ body {
   width: 100%;
 }
 
-/* optional: horizontal scroll band ho jaye */
+/* Optional: prevent a horizontal scroll bar */
 body {
   overflow-x: hidden;
 }

@@ -10,12 +10,12 @@ function GuestHeader() {
 
   const handleBookNow = () => {
     if (!user) {
-      // guest ko pehle login / signup pe bhejo
+      // Send the guest to login / signup first
       navigate("/login", {
         state: { fromGuestBook: true, from: location.pathname },
       });
     } else if (user.role === "guest") {
-      // future: dedicated guest booking flow
+      // Future: dedicated guest booking flow
       navigate("/guest/profile");
     } else {
       navigate("/dashboard");
@@ -43,9 +43,7 @@ function GuestHeader() {
 
   const firstName = user?.name ? user.name.split(" ")[0] : null;
   const profileTitle = user ? firstName || "Guest profile" : "Guest profile";
-  const avatarInitial = firstName
-    ? firstName.charAt(0).toUpperCase()
-    : "👤";
+  const avatarInitial = firstName ? firstName.charAt(0).toUpperCase() : "👤";
 
   return (
     <header className="g-header">
@@ -87,11 +85,7 @@ function GuestHeader() {
             <span className="g-phone-caret">▾</span>
           </button>
 
-          <button
-            type="button"
-            className="g-book-btn"
-            onClick={handleBookNow}
-          >
+          <button type="button" className="g-book-btn" onClick={handleBookNow}>
             Book Now
           </button>
 
@@ -125,7 +119,7 @@ function GuestHeader() {
             </NavLink>
           ))}
 
-          {/* PROFILE ROW: links ke turant neeche, buttons se upar */}
+          {/* PROFILE ROW: right below links, above buttons */}
           <button
             type="button"
             className="g-nav-mobile-profile"
@@ -134,17 +128,11 @@ function GuestHeader() {
               goToProfileOrAuth();
             }}
           >
-            <span className="g-nav-mobile-profile-avatar">
-              {avatarInitial}
-            </span>
+            <span className="g-nav-mobile-profile-avatar">{avatarInitial}</span>
             <span className="g-nav-mobile-profile-text">
-              <span className="g-nav-mobile-profile-title">
-                {profileTitle}
-              </span>
+              <span className="g-nav-mobile-profile-title">{profileTitle}</span>
               <span className="g-nav-mobile-profile-sub">
-                {user
-                  ? "View your stays & details"
-                  : "Access your reservations"}
+                {user ? "View your stays & details" : "Access your reservations"}
               </span>
             </span>
             <span className="g-nav-mobile-profile-chevron">›</span>

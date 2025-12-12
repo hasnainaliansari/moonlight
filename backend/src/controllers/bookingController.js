@@ -133,7 +133,7 @@ const createBooking = async (req, res) => {
  * POST /api/bookings/self
  * - User must be authenticated (typically role "guest")
  * - Uses req.user.name / req.user.email as guest identity
- * - Status = "pending" and room.status change Nahi hota
+ * - Status = "pending" and room.status does not change
  */
 const createSelfBooking = async (req, res) => {
   try {
@@ -178,7 +178,7 @@ const createSelfBooking = async (req, res) => {
       (req.user && req.user.email) || req.body.guestEmail || null;
     let guestName = req.user?.name || req.body.guestName || "";
 
-    // Agar JWT me email nahi to DB se user load karo
+    // If JWT does not have an email, load the user from DB
     if (!rawEmail) {
       try {
         const dbUser = await User.findById(req.user.id).select("email name");
@@ -418,7 +418,6 @@ const getMyBookings = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
-
 
 module.exports = {
   createBooking,

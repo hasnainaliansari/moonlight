@@ -218,7 +218,7 @@ function About() {
     setOpenFaqId((current) => (current === id ? null : id));
   };
 
-  // Explore Best Rooms section ke liye top 3 rooms load karo
+  // Load the top 3 rooms for the Explore Best Rooms section.
   useEffect(() => {
     const loadExploreRooms = async () => {
       try {

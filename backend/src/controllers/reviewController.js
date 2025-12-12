@@ -50,7 +50,7 @@ const createReview = async (req, res) => {
       });
     }
 
-    // prevent duplicate review for same booking + user
+    // Prevent duplicate review for the same booking + user
     const existing = await Review.findOne({
       booking: booking._id,
       user: req.user.id,
@@ -61,7 +61,7 @@ const createReview = async (req, res) => {
         .json({ message: "You already submitted a review for this booking." });
     }
 
-    // set proper guest reference
+    // Set proper guest reference
     let guestId = booking.guest || null;
     if (!guestId) {
       const guestDoc =
@@ -152,7 +152,7 @@ const updateReviewModeration = async (req, res) => {
 
     if (typeof isPublic === "boolean") {
       update.isPublic = isPublic;
-      // agar public kar rahe hain aur status set nahi, to auto-approve
+      // If making it public and status isn't set, auto-approve
       if (isPublic && !update.status) {
         update.status = "approved";
       }

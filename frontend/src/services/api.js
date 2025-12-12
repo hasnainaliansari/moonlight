@@ -1,7 +1,7 @@
 // src/services/api.js
 import axios from "axios";
 
-// ENV se lo, trailing slash hata do just in case
+// Take it from the ENV, remove the trailing slash just in case.
 const rawBase =
   import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
 

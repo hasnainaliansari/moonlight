@@ -4,7 +4,7 @@ import { useNavigate, useLocation, Link } from "react-router-dom";
 import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
 
-// same client id jo Login.jsx mein use kar rahe ho
+// The same client ID that you are using in Login.jsx.
 const GOOGLE_CLIENT_ID =
   "39602451122-j3ujp4tjc78meaiapn5bvjib7005lqt3.apps.googleusercontent.com";
 
@@ -37,7 +37,7 @@ function Signup() {
     }
   };
 
-  // agar pehle se logged in hai to redirect
+  // If already logged in, redirect.
   useEffect(() => {
     if (isAuthenticated && user) {
       redirectAfterLogin(user, true);
@@ -63,7 +63,7 @@ function Signup() {
       // Register guest user (email/password)
       await api.post("/auth/register", { name, email, password });
 
-      // signup ke baad login page pe bhejna (from state preserve)
+      // After signup, redirect to the login page (preserve the from state).
       navigate("/login", {
         replace: true,
         state: from || fromGuestBook ? { from, fromGuestBook } : undefined,

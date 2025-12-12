@@ -41,16 +41,16 @@ const createTask = async (req, res) => {
       description,
       status: "pending",
       createdBy: req.user.id,
-      assignedTo: assignedTo || null, // yahan direct save kar rahe hain
+      assignedTo: assignedTo || null, // saving directly here
     });
 
-    // Optional: when cleaning task created, mark room as "cleaning"
+    // Optional: when cleaning task is created, mark room as "cleaning"
     if (task.type === "cleaning" && room.status !== "cleaning") {
       room.status = "cleaning";
       await room.save();
     }
 
-    // Populate so frontend ko turant naam mil jae
+    // Populate so the frontend can immediately get the names
     await task.populate("room", "roomNumber type status");
     await task.populate("assignedTo", "name email role");
     await task.populate("createdBy", "name email role");

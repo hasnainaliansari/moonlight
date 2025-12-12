@@ -11,21 +11,21 @@ const { protect, requireRole } = require("../middleware/authMiddleware");
 const router = express.Router();
 
 /**
- * Public endpoint – room detail page ke liye
+ * Public endpoint – for room detail page
  * GET /api/reviews/public/:roomId
  */
 router.get("/public/:roomId", getPublicReviewsByRoom);
 
 // --------------------------------------------------
-// Neeche waale routes ke liye auth required
+// Authentication required for the routes below
 // --------------------------------------------------
 router.use(protect);
 
-// Guest – create + apni reviews
+// Guest – create review + view own reviews
 router.post("/", createReview);
 router.get("/my", getMyReviews);
 
-// Admin / staff – saari reviews, moderation
+// Admin / staff – all reviews, moderation
 router.get(
   "/",
   requireRole("admin", "manager", "receptionist"),

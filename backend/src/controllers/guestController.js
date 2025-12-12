@@ -26,15 +26,15 @@ const createGuest = async (req, res) => {
 
     const normalizedEmail = email.toLowerCase().trim();
 
-    // avoid exact duplicate (same email)
+    // Avoid exact duplicate (same email)
     const existing = await Guest.findOne({ email: normalizedEmail });
     if (existing) {
-      // same behaviour as pehle: hard error dena ho to yeh line use karo
+      // Same behavior as before: if you want a hard error, use this line
       return res
         .status(400)
         .json({ message: "Guest with this email already exists" });
 
-      // agar duplicate allow karne hon to upar return hata sakte ho
+      // If you want to allow duplicates, you can remove the return above
     }
 
     const guest = await Guest.create({
@@ -176,8 +176,8 @@ const getGuestBookings = async (req, res) => {
 
     const bookings = await Booking.find({
       $or: [
-        { guest: guest._id },          // naya data (linked by ObjectId)
-        { guestEmail: guest.email },   // purana data (email only)
+        { guest: guest._id },          // new data (linked by ObjectId)
+        { guestEmail: guest.email },   // old data (email only)
       ],
     })
       .populate("room", "roomNumber type")

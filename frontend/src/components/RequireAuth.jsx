@@ -12,7 +12,7 @@ function RequireAuth() {
     return <Navigate to="/login" replace />;
   }
 
-  // ❌ guest role ko staff console mein allow mat karo
+  // ❌ Do not allow the guest role to access the staff console
   if (user?.role === "guest") {
     return <Navigate to="/" replace />;
   }

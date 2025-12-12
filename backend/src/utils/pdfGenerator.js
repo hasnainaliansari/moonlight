@@ -69,12 +69,12 @@ const generateInvoicePdf = async (invoice, settings) => {
       doc.moveDown(0.2);
       doc.fontSize(10);
       doc.text(`Room: ${invoice.roomNumber}`, { continued: true }).text(
-        `   Nights: ${invoice.nights}`,
+        `   Nights: ${invoice.nights}`
       );
       doc.text(
         `Check-in: ${formatDate(invoice.checkInDate)}   Check-out: ${formatDate(
-          invoice.checkOutDate,
-        )}`,
+          invoice.checkOutDate
+        )}`
       );
 
       doc.moveDown(1);
@@ -108,7 +108,7 @@ const generateInvoicePdf = async (invoice, settings) => {
       doc.text(
         `Room ${invoice.roomNumber} (${invoice.nights} night(s))`,
         colDesc,
-        y,
+        y
       );
       doc.text(String(invoice.nights), colQty, y);
       doc.text(formatMoney(invoice.roomRate), colPrice, y);

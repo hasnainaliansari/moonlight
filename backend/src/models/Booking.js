@@ -3,13 +3,13 @@ const mongoose = require("mongoose");
 
 const bookingSchema = new mongoose.Schema(
   {
-    // Link to Guest profile (optional for old data)
+    // Link to Guest profile (optional for legacy data)
     guest: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Guest",
     },
 
-    // Denormalized guest info – reporting ke liye useful
+    // Denormalized guest info – useful for reporting
     guestName: {
       type: String,
       required: true,
@@ -55,7 +55,7 @@ const bookingSchema = new mongoose.Schema(
     },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User", // receptionist / manager / admin who created booking
+      ref: "User", // receptionist / manager / admin who created the booking
       required: true,
     },
   },

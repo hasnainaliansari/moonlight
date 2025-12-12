@@ -3,8 +3,8 @@ const nodemailer = require("nodemailer");
 
 /**
  * Reusable Nodemailer transporter.
- * Current project already using Gmail + app password.
- * We keep same config so existing invoice emails keep working.
+ * The current project is already using Gmail + app password.
+ * We keep the same config so existing invoice emails continue to work.
  */
 const transporter = nodemailer.createTransport({
   service: "gmail",
@@ -28,7 +28,7 @@ function getFromAddress() {
 }
 
 /**
- * Very small helper so har jagah same error handling ho.
+ * Small helper so the same error handling is used everywhere.
  */
 async function sendBasicEmail(to, subject, text) {
   if (!to) return;
@@ -49,7 +49,7 @@ async function sendBasicEmail(to, subject, text) {
 
 /**
  * ========== EXISTING: Invoice email with PDF ==========
- * (Untouched except using getFromAddress for consistency)
+ * (Untouched except for using getFromAddress for consistency)
  */
 const sendInvoiceEmail = async (invoice, pdfBuffer, settings) => {
   if (!invoice?.guestEmail) {
@@ -175,7 +175,7 @@ function formatDate(d) {
 }
 
 /**
- * Guest ne website se booking banai (status = pending)
+ * Guest created a booking from the website (status = pending)
  */
 async function sendBookingPendingEmail(booking, room) {
   if (!booking?.guestEmail) return;
@@ -206,7 +206,7 @@ ${HOTEL_NAME}
 }
 
 /**
- * Admin panel se booking confirm hui (pending -> confirmed)
+ * Booking confirmed from admin panel (pending → confirmed)
  */
 async function sendBookingConfirmedEmail(booking, room) {
   if (!booking?.guestEmail) return;
@@ -259,7 +259,6 @@ ${HOTEL_NAME}
 
   await sendBasicEmail(user.email, subject, text);
 }
-
 
 module.exports = {
   sendInvoiceEmail,

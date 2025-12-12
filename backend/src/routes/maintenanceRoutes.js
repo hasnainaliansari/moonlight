@@ -9,7 +9,7 @@ const { protect, requireRole } = require("../middleware/authMiddleware");
 
 const router = express.Router();
 
-// saare routes pe login required
+// Login required for all routes
 router.use(protect);
 
 // My tickets – maintenance / manager / admin
@@ -26,7 +26,7 @@ router.get(
   getTickets
 );
 
-// Create ticket – koi bhi ops role jo issue report karega
+// Create ticket – any operations role that reports an issue
 router.post(
   "/tickets",
   requireRole("admin", "manager", "receptionist", "housekeeping"),

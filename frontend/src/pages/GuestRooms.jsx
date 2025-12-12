@@ -271,13 +271,13 @@ function GuestRooms() {
           ) : (
             <div className="g-rooms-grid">
               {filteredRooms.map((room) => {
-                // 1) raw image choose karo (db or fallback)
+                // 1) Choose the raw image (from the database or fallback).
                 const rawImg =
                   room.imageUrl ||
                   ROOM_TYPE_IMAGES[room.type] ||
                   "https://images.unsplash.com/photo-1500534314211-0a24cd07bb5a?auto=format&fit=crop&w=900&q=80";
 
-                // 2) helper se final URL (localhost -> railway, /uploads -> full https)
+                // 2) From the helper, return the final URL (convert localhost to Railway, and /uploads to full HTTPS).
                 const imgSrc = resolveMediaUrl(rawImg);
 
                 const typeLabel = room.type

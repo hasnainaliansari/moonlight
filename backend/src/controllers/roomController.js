@@ -160,7 +160,7 @@ const createRoom = async (req, res) => {
     const files = req.files || {};
 
     if (Object.keys(files).length > 0) {
-      // ✅ ab sirf relative path store kar rahe hain
+      // ✅ Now storing only relative paths
       const addImageSlot = (slot, fieldName) => {
         const arr = files[fieldName];
         if (arr && arr[0]) {
@@ -276,7 +276,7 @@ const updateRoomImageOnly = async (req, res) => {
       return res.status(400).json({ message: "No image file uploaded" });
     }
 
-    // ✅ yahan bhi relative path
+    // ✅ relative path here as well
     const relPath = `/uploads/rooms/${req.file.filename}`;
 
     if (!room.images) {

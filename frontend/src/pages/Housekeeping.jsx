@@ -31,7 +31,7 @@ function Housekeeping() {
       // rooms
       setRooms(roomRes.data.rooms || roomRes.data);
 
-      // staff users → controller ab id, name, email, role, isActive bhej raha
+      // Staff users → the controller is now sending id, name, email, role, isActive.
       const allUsers = userRes.data.users || userRes.data;
       setStaff(
         allUsers.filter(
@@ -64,7 +64,7 @@ function Housekeeping() {
       await api.post("/housekeeping/tasks", {
         roomId: form.roomId,
         description: form.description,
-        // yahan WOH ID ja rahi hai jo /users se aati hai → u.id
+        // Here, the ID that is being sent is the one that comes from /users → u.id.
         assignedTo: form.assignedToId || null,
       });
 
