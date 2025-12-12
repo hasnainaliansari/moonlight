@@ -1,8 +1,8 @@
 // src/controllers/authController.js
 const jwt = require("jsonwebtoken");
 const nodemailer = require("nodemailer");
-const User = require("../models/User");   // staff only
-const Guest = require("../models/Guest"); // guests portal
+const User = require("../models/User");
+const Guest = require("../models/Guest");
 const { sendWelcomeEmail, sendLoginAlertEmail } = require("../utils/email");
 
 // OAuth imports
@@ -25,44 +25,39 @@ const resetTransporter = nodemailer.createTransport({
 // In-memory store for reset codes (email -> { code, expiresAt })
 const passwordResetStore = new Map();
 
-const generateToken = (subjectId, role) => {
-  return jwt.sign({ userId: subjectId, role }, process.env.JWT_SECRET, {
+const generateToken = (userId, role) => {
+  return jwt.sign({ userId, role }, process.env.JWT_SECRET, {
     expiresIn: "7d",
   });
 };
 
 /**
- * Helper: create or fetch GUEST from social profile
+ * Helper: ALWAYS ensure a Guest profile exists for this email.
+ * Isko register + OAuth dono jagah use karenge.
  */
-async function findOrCreateOAuthGuest({ email, name, provider, providerId }) {
-  if (!email) throw new Error("Email is required from provider");
+async function ensureGuestProfile({ email, name, phone }) {
+  if (!email) return null;
 
   const normalizedEmail = email.toLowerCase().trim();
 
   let guest = await Guest.findOne({ email: normalizedEmail });
 
   if (!guest) {
-    const randomPassword =
-      Math.random().toString(36).slice(-10) + Date.now().toString(36);
-
     guest = await Guest.create({
       fullName: name || normalizedEmail.split("@")[0],
       email: normalizedEmail,
-      password: randomPassword,          // hash ho jayega pre-save hook se
-      authProvider: provider,
-      providerId,
+      phone: phone || "",
       isActive: true,
     });
-
-    sendWelcomeEmail({ name: guest.fullName, email: guest.email });
   } else {
+    // Optional: basic update so naam/phone latest rahe
     let changed = false;
-    if (!guest.authProvider || guest.authProvider === "local") {
-      guest.authProvider = provider;
+    if (name && guest.fullName !== name) {
+      guest.fullName = name;
       changed = true;
     }
-    if (!guest.providerId && providerId) {
-      guest.providerId = providerId;
+    if (phone && guest.phone !== phone) {
+      guest.phone = phone;
       changed = true;
     }
     if (changed) {
@@ -74,9 +69,69 @@ async function findOrCreateOAuthGuest({ email, name, provider, providerId }) {
 }
 
 /**
+ * Helper: create or fetch user from social profile
+ */
+async function findOrCreateOAuthUser({ email, name, provider, providerId }) {
+  if (!email) {
+    throw new Error("Email is required from provider");
+  }
+
+  const normalizedEmail = email.toLowerCase().trim();
+
+  let user = await User.findOne({ email: normalizedEmail });
+
+  if (!user) {
+    // Random password – user will not use it directly, it's only for schema requirements
+    const randomPassword =
+      Math.random().toString(36).slice(-10) + Date.now().toString(36);
+
+    user = await User.create({
+      name: name || normalizedEmail.split("@")[0],
+      email: normalizedEmail,
+      password: randomPassword,
+      role: "guest",
+      authProvider: provider,
+      providerId,
+    });
+
+    // ✅ Guest profile bhi banao
+    await ensureGuestProfile({
+      email: normalizedEmail,
+      name,
+    });
+
+    // Send welcome email (fire-and-forget)
+    sendWelcomeEmail({ name: user.name, email: user.email });
+  } else {
+    // User already exists – update provider info (optional)
+    let changed = false;
+
+    if (!user.authProvider || user.authProvider === "local") {
+      user.authProvider = provider;
+      changed = true;
+    }
+    if (!user.providerId && providerId) {
+      user.providerId = providerId;
+      changed = true;
+    }
+
+    if (changed) {
+      await user.save();
+    }
+
+    // ✅ Existing user ke liye bhi Guest profile ensure karo
+    await ensureGuestProfile({
+      email: user.email,
+      name: user.name,
+    });
+  }
+
+  return user;
+}
+
+/**
  * --------- PUBLIC GUEST SIGNUP (email/password) ----------
  * POST /api/auth/register
- * 👉 Sirf guests collection me save karega
  */
 const register = async (req, res) => {
   try {
@@ -90,37 +145,44 @@ const register = async (req, res) => {
 
     const normalizedEmail = email.toLowerCase().trim();
 
-    // Staff collection me check mat karo, woh alag flow hai
-    const existingGuest = await Guest.findOne({ email: normalizedEmail });
-    if (existingGuest) {
+    const existingUser = await User.findOne({ email: normalizedEmail });
+    if (existingUser) {
       return res
         .status(400)
-        .json({ message: "Guest with this email already exists" });
+        .json({ message: "User with this email already exists" });
     }
 
-    const guest = await Guest.create({
-      fullName: name,
+    // 🔹 1) User account (auth ke liye)
+    const user = await User.create({
+      name,
       email: normalizedEmail,
       password,
-      phone,
+      role: "guest",
       authProvider: "local",
-      isActive: true,
     });
 
-    const token = generateToken(guest._id, "guest");
+    // 🔹 2) Guest profile (CRM / bookings ke liye)
+    await ensureGuestProfile({
+      email: normalizedEmail,
+      name,
+      phone,
+    });
 
+    const token = generateToken(user._id, user.role);
+
+    // 🔹 Welcome email
     sendWelcomeEmail({
-      name: guest.fullName,
-      email: guest.email,
+      name: user.name,
+      email: user.email,
     });
 
     res.status(201).json({
-      message: "Guest registered successfully",
+      message: "User registered successfully",
       user: {
-        id: guest._id,
-        name: guest.fullName,
-        email: guest.email,
-        role: "guest",
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role, // 'guest'
       },
       token,
     });
@@ -133,74 +195,40 @@ const register = async (req, res) => {
 /**
  * --------- NORMAL LOGIN (email/password) ----------
  * POST /api/auth/login
- * 👉 Email staff me mila to staff login, warna guest me search
  */
 const login = async (req, res) => {
   try {
     const { email, password } = req.body;
     const normalizedEmail = email.toLowerCase().trim();
 
-    // 1) Staff user? (users collection)
-    let account = await User.findOne({ email: normalizedEmail });
-    if (account) {
-      if (!account.isActive) {
-        return res.status(400).json({ message: "Invalid credentials" });
-      }
-
-      const isMatch = await account.matchPassword(password);
-      if (!isMatch) {
-        return res.status(400).json({ message: "Invalid credentials" });
-      }
-
-      const token = generateToken(account._id, account.role);
-
-      const safeUser = {
-        id: account._id,
-        name: account.name,
-        email: account.email,
-        role: account.role, // admin / manager / receptionist / ...
-      };
-
-      sendLoginAlertEmail({
-        name: account.name,
-        email: account.email,
-      });
-
-      return res.json({
-        message: "Login successful",
-        user: safeUser,
-        token,
-      });
-    }
-
-    // 2) Guest account? (guests collection)
-    const guest = await Guest.findOne({ email: normalizedEmail });
-    if (!guest || guest.isActive === false) {
+    const user = await User.findOne({ email: normalizedEmail });
+    if (!user || !user.isActive) {
       return res.status(400).json({ message: "Invalid credentials" });
     }
 
-    const isMatch = await guest.matchPassword(password);
+    const isMatch = await user.matchPassword(password);
     if (!isMatch) {
       return res.status(400).json({ message: "Invalid credentials" });
     }
 
-    const token = generateToken(guest._id, "guest");
+    const token = generateToken(user._id, user.role);
 
-    const safeGuestUser = {
-      id: guest._id,
-      name: guest.fullName,
-      email: guest.email,
-      role: "guest",
+    const safeUser = {
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
     };
 
+    // 🔹 Login notification email
     sendLoginAlertEmail({
-      name: guest.fullName,
-      email: guest.email,
+      name: user.name,
+      email: user.email,
     });
 
-    return res.json({
+    res.json({
       message: "Login successful",
-      user: safeGuestUser,
+      user: safeUser,
       token,
     });
   } catch (error) {
@@ -213,7 +241,6 @@ const login = async (req, res) => {
  * --------- FORGOT PASSWORD ----------
  * POST /api/auth/forgot-password
  * body: { email }
- * 👉 Staff ya guest – jis bhi collection me mile
  */
 const forgotPassword = async (req, res) => {
   try {
@@ -224,35 +251,24 @@ const forgotPassword = async (req, res) => {
     }
 
     const normalizedEmail = email.toLowerCase().trim();
+    const user = await User.findOne({ email: normalizedEmail });
 
-    let account = await User.findOne({ email: normalizedEmail });
-    let displayName;
-
-    if (account) {
-      displayName = account.name;
-    } else {
-      const guest = await Guest.findOne({ email: normalizedEmail });
-      if (guest) {
-        account = guest;
-        displayName = guest.fullName;
-      }
-    }
-
-    // Same response even if account not found (security best-practice)
-    if (!account) {
+    // Same response even if user not found (security best-practice)
+    if (!user) {
       return res.json({
         message:
           "If an account exists with this email, a reset code has been sent.",
       });
     }
 
+    // 6-digit code
     const code = Math.floor(100000 + Math.random() * 900000).toString();
     const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes
 
     passwordResetStore.set(normalizedEmail, { code, expiresAt });
 
     const subject = `Your ${HOTEL_NAME} password reset code`;
-    const text = `Hello ${displayName || "Guest"},
+    const text = `Hello ${user.name || "Guest"},
 
 We received a request to reset the password for your ${HOTEL_NAME} account.
 
@@ -295,7 +311,6 @@ ${HOTEL_NAME}
  * --------- RESET PASSWORD ----------
  * POST /api/auth/reset-password
  * body: { email, code, newPassword }
- * 👉 Staff ya guest – jis bhi collection me mile
  */
 const resetPassword = async (req, res) => {
   try {
@@ -310,25 +325,33 @@ const resetPassword = async (req, res) => {
     const normalizedEmail = email.toLowerCase().trim();
     const entry = passwordResetStore.get(normalizedEmail);
 
-    if (!entry || entry.expiresAt < Date.now() || entry.code !== code) {
+    if (!entry) {
+      return res
+        .status(400)
+        .json({ message: "Invalid or expired reset code" });
+    }
+
+    if (entry.expiresAt < Date.now()) {
       passwordResetStore.delete(normalizedEmail);
       return res
         .status(400)
         .json({ message: "Invalid or expired reset code" });
     }
 
-    let account = await User.findOne({ email: normalizedEmail });
-    if (!account) {
-      account = await Guest.findOne({ email: normalizedEmail });
+    if (entry.code !== code) {
+      return res
+        .status(400)
+        .json({ message: "Invalid or expired reset code" });
     }
 
-    if (!account) {
+    const user = await User.findOne({ email: normalizedEmail });
+    if (!user) {
       passwordResetStore.delete(normalizedEmail);
-      return res.status(400).json({ message: "Account not found" });
+      return res.status(400).json({ message: "User not found" });
     }
 
-    account.password = newPassword; // hash User/Guest model ke pre-save se ho jayega
-    await account.save();
+    user.password = newPassword; // pre-save hook will hash it
+    await user.save();
 
     passwordResetStore.delete(normalizedEmail);
 
@@ -343,7 +366,6 @@ const resetPassword = async (req, res) => {
  * --------- SOCIAL LOGIN (Google / Facebook / Apple placeholder) ----------
  * POST /api/auth/oauth
  * body: { provider: 'google' | 'facebook' | 'apple', idToken?, accessToken? }
- * 👉 Guests ke liye OAuth (staff ko email/password se hi rakho)
  */
 const oauthLogin = async (req, res) => {
   try {
@@ -381,6 +403,7 @@ const oauthLogin = async (req, res) => {
           .json({ message: "Facebook accessToken is required" });
       }
 
+      // Simple graph call to get basic profile
       const resp = await fetch(
         `https://graph.facebook.com/me?fields=id,name,email&access_token=${accessToken}`
       );
@@ -408,32 +431,37 @@ const oauthLogin = async (req, res) => {
         .json({ message: "Could not read email from provider" });
     }
 
-    // ✅ Guest as OAuth user
-    const guest = await findOrCreateOAuthGuest({
+    const user = await findOrCreateOAuthUser({
       email: profile.email,
       name: profile.name,
       provider,
       providerId: profile.providerId,
     });
 
-    if (guest.isActive === false) {
+    if (!user.isActive) {
       return res
         .status(403)
         .json({ message: "Account is disabled. Please contact support." });
     }
 
-    const token = generateToken(guest._id, "guest");
+    // Extra safety: ensure guest exists even for old users
+    await ensureGuestProfile({
+      email: user.email,
+      name: user.name,
+    });
 
-    const safeGuestUser = {
-      id: guest._id,
-      name: guest.fullName,
-      email: guest.email,
-      role: "guest",
+    const token = generateToken(user._id, user.role);
+
+    const safeUser = {
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
     };
 
     res.json({
       message: "Login successful",
-      user: safeGuestUser,
+      user: safeUser,
       token,
     });
   } catch (error) {
