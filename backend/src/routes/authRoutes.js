@@ -6,7 +6,7 @@ const {
   oauthLogin,
   forgotPassword,
   resetPassword,
-} = require("../controllers/authcontroller"); // 👈 yahan file ka naam exact rakho
+} = require("../controllers/authController");
 
 const router = express.Router();
 
