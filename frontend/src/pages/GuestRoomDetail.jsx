@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import "../styles/guest.css";
+import { resolveMediaUrl } from "../utils/media";
 
 const ROOM_TYPE_IMAGES = {
   single:
@@ -31,7 +32,7 @@ function ratingStars(n) {
 }
 
 function resolveFallbackHero(room) {
-  if (room.imageUrl) return room.imageUrl;
+  if (room.imageUrl) return resolveMediaUrl(room.imageUrl);
   if (room.type && ROOM_TYPE_IMAGES[room.type]) {
     return ROOM_TYPE_IMAGES[room.type];
   }
@@ -173,7 +174,7 @@ function GuestRoomDetail() {
     extraImages = sorted
       .filter((img) => img && img.url)
       .map((img) => ({
-        url: img.url,
+        url: resolveMediaUrl(img.url),
         slot: img.slot,
       }));
   }
@@ -203,7 +204,8 @@ function GuestRoomDetail() {
       ? 0
       : activeImageIndex;
 
-  const heroImg = galleryImages[clampedIndex].url;
+  const heroImg = resolveMediaUrl(galleryImages[clampedIndex].url);
+
 
   const hasExtraImages = galleryImages.length > 1;
   const sideImages = hasExtraImages ? galleryImages.slice(0, 4) : [];
@@ -220,8 +222,7 @@ function GuestRoomDetail() {
   const avgRating =
     reviews && reviews.length
       ? (
-          reviews.reduce((sum, r) => sum + (r.rating || 0), 0) /
-          reviews.length
+          reviews.reduce((sum, r) => sum + (r.rating || 0), 0) / reviews.length
         ).toFixed(1)
       : null;
 
@@ -373,8 +374,7 @@ function GuestRoomDetail() {
                     <span className="g-room-thumb-label">
                       {img.slot === "main"
                         ? "Main"
-                        : img.slot.charAt(0).toUpperCase() +
-                          img.slot.slice(1)}
+                        : img.slot.charAt(0).toUpperCase() + img.slot.slice(1)}
                     </span>
                   </button>
                 );
@@ -583,8 +583,7 @@ function GuestRoomDetail() {
                 {bookings.map((b) => (
                   <div key={b._id} className="g-room-booking-pill">
                     <span className="g-room-booking-dates">
-                      {formatDate(b.checkInDate)} —{" "}
-                      {formatDate(b.checkOutDate)}
+                      {formatDate(b.checkInDate)} — {formatDate(b.checkOutDate)}
                     </span>
                     <span className="g-room-booking-status">{b.status}</span>
                   </div>

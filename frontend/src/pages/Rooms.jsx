@@ -1,6 +1,7 @@
 // src/pages/Rooms.jsx
 import { useEffect, useState } from "react";
 import api from "../services/api";
+import { resolveMediaUrl } from "../utils/media";
 
 function getSlotsForRoomType(type) {
   switch (type) {
@@ -33,13 +34,14 @@ function getSlotLabel(slot) {
 function getImageForSlot(room, slot) {
   if (room.images && room.images.length > 0) {
     const found = room.images.find((img) => img.slot === slot);
-    if (found) return found.url;
+    if (found) return resolveMediaUrl(found.url);
   }
   if (slot === "main" && room.imageUrl) {
-    return room.imageUrl;
+    return resolveMediaUrl(room.imageUrl);
   }
   return null;
 }
+
 
 function Rooms() {
   const [rooms, setRooms] = useState([]);

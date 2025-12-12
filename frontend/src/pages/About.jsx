@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "../styles/about.css";
 import api from "../services/api";
+import { resolveMediaUrl } from "../utils/media";
 
 const rightSliderSlides = [
   {
@@ -196,7 +197,6 @@ const FAQ_ITEMS = [
   },
 ];
 
-
 function About() {
   // section 1 – right column slider
   const [rightIndex, setRightIndex] = useState(0);
@@ -235,6 +235,8 @@ function About() {
             ROOM_TYPE_IMAGES[room.type] ||
             "https://images.unsplash.com/photo-1500534314211-0a24cd07bb5a?auto=format&fit=crop&w=900&q=80";
 
+          const image = resolveMediaUrl(imgSrc);
+
           const price =
             room.pricePerNight != null
               ? Number(room.pricePerNight).toFixed(0)
@@ -250,7 +252,7 @@ function About() {
             name: `Room ${room.roomNumber}`,
             price,
             capacity,
-            image: imgSrc,
+            image,
             subtitle: room.features?.length
               ? room.features.slice(0, 2).join(" • ")
               : "Complimentary breakfast • Free Wi-Fi",
@@ -303,21 +305,18 @@ function About() {
   };
 
   const goComfortPrev = () => {
-    setComfortIndex((prev) =>
-      prev === 0 ? totalComfortSlides - 1 : prev - 1
-    );
+    setComfortIndex((prev) => (prev === 0 ? totalComfortSlides - 1 : prev - 1));
   };
 
   const activeComfortSlide = comfortSlides[comfortIndex];
 
   const handleBookNow = () => {
-  navigate("/accommodations");
-};
+    navigate("/accommodations");
+  };
 
-const handleAmenitiesClick = () => {
-  navigate("/amenities");
-};
-
+  const handleAmenitiesClick = () => {
+    navigate("/amenities");
+  };
 
   return (
     <div className="about-root">
@@ -630,10 +629,7 @@ const handleAmenitiesClick = () => {
                       className="about-explore-img"
                       style={{ backgroundImage: `url(${card.image})` }}
                     >
-                      <span
-                        className="about-explore-dot"
-                        aria-hidden="true"
-                      />
+                      <span className="about-explore-dot" aria-hidden="true" />
 
                       <span className="about-explore-price">
                         ${card.price}
@@ -883,7 +879,7 @@ const handleAmenitiesClick = () => {
             </div>
           </div>
         </section>
-                {/* =======================
+        {/* =======================
             SECTION 6 – Final CTA
            ======================= */}
         <section className="about-cta">
@@ -921,7 +917,6 @@ const handleAmenitiesClick = () => {
             </div>
           </div>
         </section>
-
       </main>
     </div>
   );

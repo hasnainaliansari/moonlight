@@ -160,16 +160,15 @@ const createRoom = async (req, res) => {
     const files = req.files || {};
 
     if (Object.keys(files).length > 0) {
-      const baseUrl = `${req.protocol}://${req.get("host")}`;
-
+      // ✅ ab sirf relative path store kar rahe hain
       const addImageSlot = (slot, fieldName) => {
         const arr = files[fieldName];
         if (arr && arr[0]) {
           const file = arr[0];
-          const url = `${baseUrl}/uploads/rooms/${file.filename}`;
-          images.push({ slot, url });
+          const relPath = `/uploads/rooms/${file.filename}`;
+          images.push({ slot, url: relPath });
           if (slot === "main" && !finalImageUrl) {
-            finalImageUrl = url;
+            finalImageUrl = relPath;
           }
         }
       };
@@ -182,11 +181,10 @@ const createRoom = async (req, res) => {
 
     // Backward compat: if middleware was single() and gave req.file
     if (!images.length && req.file) {
-      const baseUrl = `${req.protocol}://${req.get("host")}`;
-      const url = `${baseUrl}/uploads/rooms/${req.file.filename}`;
-      images.push({ slot: "main", url });
+      const relPath = `/uploads/rooms/${req.file.filename}`;
+      images.push({ slot: "main", url: relPath });
       if (!finalImageUrl) {
-        finalImageUrl = url;
+        finalImageUrl = relPath;
       }
     }
 
@@ -278,8 +276,8 @@ const updateRoomImageOnly = async (req, res) => {
       return res.status(400).json({ message: "No image file uploaded" });
     }
 
-    const baseUrl = `${req.protocol}://${req.get("host")}`;
-    const imageUrl = `${baseUrl}/uploads/rooms/${req.file.filename}`;
+    // ✅ yahan bhi relative path
+    const relPath = `/uploads/rooms/${req.file.filename}`;
 
     if (!room.images) {
       room.images = [];
@@ -287,16 +285,15 @@ const updateRoomImageOnly = async (req, res) => {
 
     const existingIndex = room.images.findIndex((img) => img.slot === slot);
     if (existingIndex >= 0) {
-      room.images[existingIndex].url = imageUrl;
+      room.images[existingIndex].url = relPath;
     } else {
-      room.images.push({ slot, url: imageUrl });
+      room.images.push({ slot, url: relPath });
     }
 
     if (slot === "main") {
-      room.imageUrl = imageUrl;
+      room.imageUrl = relPath;
     } else if (!room.imageUrl) {
-      // If main not set yet, use this as hero
-      room.imageUrl = imageUrl;
+      room.imageUrl = relPath;
     }
 
     await room.save();
