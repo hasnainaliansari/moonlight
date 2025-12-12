@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import api from "../services/api";
 import "../styles/guest.css";
+import { resolveMediaUrl } from "../utils/media";
 
 // Fallback static slides if DB returns nothing
 const fallbackSlides = [
@@ -128,10 +129,18 @@ function GuestHome() {
             ? `${r.type.charAt(0).toUpperCase() + r.type.slice(1)}`
             : "Room";
 
-          const imgSrc =
+          // 1) pehle DB ka imageUrl (jo currently localhost ho sakta hai)
+          // 2) warna images[0].url
+          // 3) warna room type placeholder
+          // 4) warna last-resort static fallback
+          const rawImage =
             r.imageUrl ||
+            (r.images && r.images.length > 0 ? r.images[0].url : null) ||
             ROOM_TYPE_IMAGES[r.type] ||
             "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=900&q=80";
+
+          // YAHAN localhost -> Railway URL convert hoga
+          const imgSrc = resolveMediaUrl(rawImage);
 
           return {
             id: r.id,
