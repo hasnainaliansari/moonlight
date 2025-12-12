@@ -32,49 +32,25 @@ const generateToken = (userId, role) => {
 };
 
 /**
- * Helper: ensure a Guest record exists for a guest user
- * - Only runs for role === 'guest'
- * - Safe: does NOT break main flow on error
+ * Helper: ensure a Guest profile exists for this email.
+ * Used by BOTH normal register and OAuth login.
  */
-async function ensureGuestForUser(user, extra = {}) {
-  try {
-    if (!user || user.role !== "guest" || !user.email) return null;
+async function ensureGuestProfile({ email, name, phone }) {
+  if (!email) return null;
 
-    const email = user.email.toLowerCase().trim();
-    const fullName = user.name || email.split("@")[0];
-    const phone = extra.phone || undefined;
+  const normalizedEmail = email.toLowerCase().trim();
 
-    let guest = await Guest.findOne({ email });
-
-    if (!guest) {
-      guest = await Guest.create({
-        fullName,
-        email,
-        phone,
-        isActive: true,
-      });
-    } else {
-      // Optional: keep guest name up to date if empty
-      let changed = false;
-      if (!guest.fullName && fullName) {
-        guest.fullName = fullName;
-        changed = true;
-      }
-      if (phone && !guest.phone) {
-        guest.phone = phone;
-        changed = true;
-      }
-      if (changed) {
-        await guest.save();
-      }
-    }
-
-    return guest;
-  } catch (err) {
-    console.error("ensureGuestForUser error:", err.message);
-    // don't throw – auth flow should still work
-    return null;
+  let guest = await Guest.findOne({ email: normalizedEmail });
+  if (!guest) {
+    guest = await Guest.create({
+      fullName: name || normalizedEmail.split("@")[0],
+      email: normalizedEmail,
+      phone: phone || "",
+      isActive: true,
+    });
   }
+
+  return guest;
 }
 
 /**
@@ -103,6 +79,12 @@ async function findOrCreateOAuthUser({ email, name, provider, providerId }) {
       providerId,
     });
 
+    // Create matching guest profile as well
+    await ensureGuestProfile({
+      email: normalizedEmail,
+      name,
+    });
+
     // Send welcome email (fire-and-forget)
     sendWelcomeEmail({ name: user.name, email: user.email });
   } else {
@@ -121,6 +103,12 @@ async function findOrCreateOAuthUser({ email, name, provider, providerId }) {
     if (changed) {
       await user.save();
     }
+
+    // Make sure guest profile exists for existing user too
+    await ensureGuestProfile({
+      email: user.email,
+      name: user.name,
+    });
   }
 
   return user;
@@ -158,8 +146,12 @@ const register = async (req, res) => {
       authProvider: "local",
     });
 
-    // Ensure Guest record exists for this guest user
-    await ensureGuestForUser(user, { phone });
+    // 🔹 Ensure Guest profile exists
+    await ensureGuestProfile({
+      email: normalizedEmail,
+      name,
+      phone,
+    });
 
     const token = generateToken(user._id, user.role);
 
@@ -212,9 +204,6 @@ const login = async (req, res) => {
       email: user.email,
       role: user.role,
     };
-
-    // 🔹 Make sure a Guest record exists for guest users
-    await ensureGuestForUser(user);
 
     // 🔹 Login notification email
     sendLoginAlertEmail({
@@ -442,8 +431,11 @@ const oauthLogin = async (req, res) => {
         .json({ message: "Account is disabled. Please contact support." });
     }
 
-    // Ensure guest profile exists for OAuth guest users
-    await ensureGuestForUser(user);
+    // Also make sure Guest exists in case of legacy users
+    await ensureGuestProfile({
+      email: user.email,
+      name: user.name,
+    });
 
     const token = generateToken(user._id, user.role);
 
