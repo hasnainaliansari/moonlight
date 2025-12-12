@@ -844,9 +844,7 @@ function About() {
                 about staying at Moonlight.
               </h2>
               <p className="about-faq-sub">
-                Agar aap pehli baar Moonlight aa rahe hain ya regular guest
-                hain, in short answers se aapko bookings, timings aur amenities
-                ka quick overview mil jayega.
+                Whether you’re visiting Moonlight for the first time or you’re a regular guest, these short answers will give you a quick overview of bookings, timings, and amenities.
               </p>
             </div>
 
