@@ -3,7 +3,7 @@ const express = require("express");
 const cors = require("cors");
 const path = require("path");
 
-// Routes ...
+// Existing routes
 const authRoutes = require("./routes/authRoutes");
 const userRoutes = require("./routes/userRoutes");
 const roomRoutes = require("./routes/roomRoutes");
@@ -14,33 +14,21 @@ const maintenanceRoutes = require("./routes/maintenanceRoutes");
 const reportRoutes = require("./routes/reportRoutes");
 const guestRoutes = require("./routes/guestRoutes");
 const settingRoutes = require("./routes/settingRoutes");
+
+// New routes
 const reviewRoutes = require("./routes/reviewRoutes");
 const profileRoutes = require("./routes/profileRoutes");
 
 const app = express();
 
 /**
- * CORS CONFIG
+ * 🔥 CORS – allow all origins (safe for you because auth header use kar rahe ho,
+ *   cookies use nahi kar rahe). Isse Vercel waali origin bhi allow ho jayegi,
+ *   aur koi CORS issue nahi rahega.
  */
-const allowedOrigins = [
-  "http://localhost:5173",
-  "http://127.0.0.1:5173",
-  "https://moonlight-oig106op7-hasnainaliansari221-gmailcoms-projects.vercel.app", // <-- tumhara Vercel URL
-];
-
 app.use(
   cors({
-    origin: (origin, callback) => {
-      // Postman / curl etc (no origin) → allow
-      if (!origin) return callback(null, true);
-
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
-
-      // Agar kabhi koi random origin hit kare
-      return callback(new Error("Not allowed by CORS"));
-    },
+    origin: "*", // <- yahan sabko allow kar diya
     methods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
   })
@@ -54,23 +42,50 @@ app.use(express.json());
 // Serve uploaded images
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
-// ---- API routes ----
+// Auth
 app.use("/api/auth", authRoutes);
+
+// Users / staff
 app.use("/api/users", userRoutes);
+
+// Rooms
 app.use("/api/rooms", roomRoutes);
+
+// Bookings
 app.use("/api/bookings", bookingRoutes);
+
+// Invoices
 app.use("/api/invoices", invoiceRoutes);
+
+// Housekeeping
 app.use("/api/housekeeping", housekeepingRoutes);
+
+// Maintenance
 app.use("/api/maintenance", maintenanceRoutes);
+
+// Reports
 app.use("/api/reports", reportRoutes);
+
+// Guests
 app.use("/api/guests", guestRoutes);
+
+// Settings (hotel info, tax, etc.)
 app.use("/api/settings", settingRoutes);
+
+// Reviews (guest feedback)
 app.use("/api/reviews", reviewRoutes);
+
+// Profile (guest self dashboard)
 app.use("/api/profile", profileRoutes);
 
 // Health check
 app.get("/api/health", (req, res) => {
   res.json({ status: "ok", message: "Moonlight Hotel API is running ✨" });
+});
+
+// Optional root info
+app.get("/", (req, res) => {
+  res.send("Moonlight API root");
 });
 
 module.exports = app;
