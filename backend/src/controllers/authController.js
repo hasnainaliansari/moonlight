@@ -32,8 +32,8 @@ const generateToken = (userId, role) => {
 };
 
 /**
- * Helper: ensure a Guest profile exists for this email.
- * Used by BOTH normal register and OAuth login.
+ * Helper: ALWAYS ensure a Guest profile exists for this email.
+ * Isko register + OAuth dono jagah use karenge.
  */
 async function ensureGuestProfile({ email, name, phone }) {
   if (!email) return null;
@@ -41,6 +41,7 @@ async function ensureGuestProfile({ email, name, phone }) {
   const normalizedEmail = email.toLowerCase().trim();
 
   let guest = await Guest.findOne({ email: normalizedEmail });
+
   if (!guest) {
     guest = await Guest.create({
       fullName: name || normalizedEmail.split("@")[0],
@@ -48,6 +49,20 @@ async function ensureGuestProfile({ email, name, phone }) {
       phone: phone || "",
       isActive: true,
     });
+  } else {
+    // Optional: basic update so naam/phone latest rahe
+    let changed = false;
+    if (name && guest.fullName !== name) {
+      guest.fullName = name;
+      changed = true;
+    }
+    if (phone && guest.phone !== phone) {
+      guest.phone = phone;
+      changed = true;
+    }
+    if (changed) {
+      await guest.save();
+    }
   }
 
   return guest;
@@ -79,7 +94,7 @@ async function findOrCreateOAuthUser({ email, name, provider, providerId }) {
       providerId,
     });
 
-    // Create matching guest profile as well
+    // ✅ Guest profile bhi banao
     await ensureGuestProfile({
       email: normalizedEmail,
       name,
@@ -104,7 +119,7 @@ async function findOrCreateOAuthUser({ email, name, provider, providerId }) {
       await user.save();
     }
 
-    // Make sure guest profile exists for existing user too
+    // ✅ Existing user ke liye bhi Guest profile ensure karo
     await ensureGuestProfile({
       email: user.email,
       name: user.name,
@@ -137,7 +152,7 @@ const register = async (req, res) => {
         .json({ message: "User with this email already exists" });
     }
 
-    // Always assign guest role; for staff use /api/users
+    // 🔹 1) User account (auth ke liye)
     const user = await User.create({
       name,
       email: normalizedEmail,
@@ -146,7 +161,7 @@ const register = async (req, res) => {
       authProvider: "local",
     });
 
-    // 🔹 Ensure Guest profile exists
+    // 🔹 2) Guest profile (CRM / bookings ke liye)
     await ensureGuestProfile({
       email: normalizedEmail,
       name,
@@ -403,8 +418,6 @@ const oauthLogin = async (req, res) => {
         providerId: data.id,
       };
     } else if (provider === "apple") {
-      // NOTE: Apple verification is a bit complex.
-      // For production, use a library like 'apple-signin-auth'.
       return res
         .status(400)
         .json({ message: "Apple OAuth not implemented yet" });
@@ -431,7 +444,7 @@ const oauthLogin = async (req, res) => {
         .json({ message: "Account is disabled. Please contact support." });
     }
 
-    // Also make sure Guest exists in case of legacy users
+    // Extra safety: ensure guest exists even for old users
     await ensureGuestProfile({
       email: user.email,
       name: user.name,
