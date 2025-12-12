@@ -115,6 +115,7 @@ function GuestHome() {
   const { user } = useAuth();
   const navigate = useNavigate();
 
+  // Always prefer DB slides if any, else fallback
   const slides = dbSlides.length ? dbSlides : fallbackSlides;
 
   // Load rooms from DB for hero slider
@@ -124,31 +125,30 @@ function GuestHome() {
         const res = await api.get("/rooms/public");
         const rooms = res.data?.rooms || [];
 
-        const mapped = rooms.slice(0, 5).map((r) => {
-          const baseTitle = r.type
-            ? `${r.type.charAt(0).toUpperCase() + r.type.slice(1)}`
+        const mapped = rooms.slice(0, 5).map((room) => {
+          const baseTitle = room.type
+            ? room.type.charAt(0).toUpperCase() + room.type.slice(1)
             : "Room";
 
-          // 1) pehle DB ka imageUrl (jo currently localhost ho sakta hai)
-          // 2) warna images[0].url
-          // 3) warna room type placeholder
-          // 4) warna last-resort static fallback
-          const rawImage =
-            r.imageUrl ||
-            (r.images && r.images.length > 0 ? r.images[0].url : null) ||
-            ROOM_TYPE_IMAGES[r.type] ||
-            "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=900&q=80";
-
-          // YAHAN localhost -> Railway URL convert hoga
-          const imgSrc = resolveMediaUrl(rawImage);
+          // same style as GuestRooms/About: resolveMediaUrl
+          const imgSrc = resolveMediaUrl(
+            room.imageUrl ||
+              (room.images && room.images.length > 0
+                ? room.images[0].url
+                : null) ||
+              ROOM_TYPE_IMAGES[room.type] ||
+              "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=900&q=80"
+          );
 
           return {
-            id: r.id,
-            roomId: r.id,
-            title: `${baseTitle} – ${r.roomNumber}`,
+            id: room.id, // backend already sends { id: _id }
+            roomId: room.id,
+            title: `${baseTitle} – ${room.roomNumber}`,
             img: imgSrc,
           };
         });
+
+        console.log("GuestHome hero mapped slides:", mapped);
 
         if (mapped.length) {
           setDbSlides(mapped);
