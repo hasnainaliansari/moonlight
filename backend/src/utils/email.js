@@ -1,24 +1,51 @@
 // src/utils/email.js
 const nodemailer = require("nodemailer");
 
-/**
- * Reusable Nodemailer transporter.
- * The current project is already using Gmail + app password.
- * We keep the same config so existing invoice emails continue to work.
- */
+// --------------------------------------------------
+//  SMTP / Gmail transporter
+// --------------------------------------------------
+//
+// Uses:
+//  SMTP_HOST=smtp.gmail.com
+//  SMTP_PORT=587
+//  SMTP_USER=your_gmail@gmail.com
+//  SMTP_PASS=app_password
+//  SMTP_FROM="Moonlight Hotel <your_gmail@gmail.com>"
+// --------------------------------------------------
+
 const transporter = nodemailer.createTransport({
-  service: "gmail",
+  host: process.env.SMTP_HOST || "smtp.gmail.com",
+  port: Number(process.env.SMTP_PORT) || 587,
+  secure: false, // STARTTLS on 587
   auth: {
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS,
   },
+  // extra debugging – Railway logs me zyada info milegi
+  logger: true,
+  debug: true,
 });
+
+// App start par ek quick verify (non-blocking)
+// Sirf log karega; app crash nahi karega.
+transporter
+  .verify()
+  .then(() => {
+    console.log("[email] SMTP connection OK (Gmail)");
+  })
+  .catch((err) => {
+    console.error("[email] SMTP verify FAILED:", {
+      message: err.message,
+      code: err.code,
+      command: err.command,
+    });
+  });
 
 const HOTEL_NAME = process.env.HOTEL_NAME || "Moonlight Hotel";
 
-/**
- * Helper: get default "from" header
- */
+// --------------------------------------------------
+//  Helper: default FROM address
+// --------------------------------------------------
 function getFromAddress() {
   // e.g. "Moonlight Hotel <hasnainaliansari221@gmail.com>"
   return (
@@ -27,9 +54,9 @@ function getFromAddress() {
   );
 }
 
-/**
- * Small helper so the same error handling is used everywhere.
- */
+// --------------------------------------------------
+//  Helper: basic text email
+// --------------------------------------------------
 async function sendBasicEmail(to, subject, text) {
   if (!to) return;
 
@@ -42,19 +69,23 @@ async function sendBasicEmail(to, subject, text) {
 
   try {
     await transporter.sendMail(mailOptions);
+    console.log("[email] Sent:", subject, "→", to);
   } catch (err) {
-    console.error("Failed to send email:", subject, err.message);
+    console.error("[email] Failed to send:", {
+      to,
+      subject,
+      message: err.message,
+      code: err.code,
+      command: err.command,
+    });
   }
 }
 
-/**
- * ========== EXISTING: Invoice email with PDF ==========
- * (Untouched except for using getFromAddress for consistency)
- */
+// --------------------------------------------------
+//  Invoice email with PDF attachment
+// --------------------------------------------------
 const sendInvoiceEmail = async (invoice, pdfBuffer, settings) => {
-  if (!invoice?.guestEmail) {
-    return;
-  }
+  if (!invoice?.guestEmail) return;
 
   const hotelName = settings?.hotelName || HOTEL_NAME;
   const fromName =
@@ -76,7 +107,7 @@ If you have any questions, feel free to reply to this email.
 
 Best regards,
 ${hotelName}
-`;
+`.trim();
 
   const fileName = `invoice-${invoice.invoiceNumber || invoice._id}.pdf`;
 
@@ -96,18 +127,21 @@ ${hotelName}
 
   try {
     await transporter.sendMail(mailOptions);
+    console.log("[email] Invoice sent:", subject, "→", invoice.guestEmail);
   } catch (err) {
-    console.error("Failed to send invoice email:", err.message);
+    console.error("[email] Failed to send invoice:", {
+      to: invoice.guestEmail,
+      subject,
+      message: err.message,
+      code: err.code,
+      command: err.command,
+    });
   }
 };
 
-/**
- * ========== NEW: AUTH EMAILS ==========
- */
-
-/**
- * Account created / welcome email
- */
+// --------------------------------------------------
+//  AUTH EMAILS
+// --------------------------------------------------
 async function sendWelcomeEmail(user) {
   if (!user?.email) return;
 
@@ -130,9 +164,6 @@ ${HOTEL_NAME}
   await sendBasicEmail(user.email, subject, text);
 }
 
-/**
- * Login notification email
- */
 async function sendLoginAlertEmail(user) {
   if (!user?.email) return;
 
@@ -161,10 +192,9 @@ ${HOTEL_NAME}
   await sendBasicEmail(user.email, subject, text);
 }
 
-/**
- * ========== NEW: BOOKING EMAILS ==========
- */
-
+// --------------------------------------------------
+//  BOOKING EMAILS
+// --------------------------------------------------
 function formatDate(d) {
   if (!d) return "";
   return new Date(d).toLocaleDateString("en-US", {
@@ -174,14 +204,10 @@ function formatDate(d) {
   });
 }
 
-/**
- * Guest created a booking from the website (status = pending)
- */
 async function sendBookingPendingEmail(booking, room) {
   if (!booking?.guestEmail) return;
 
   const subject = `Your booking request is pending – ${HOTEL_NAME}`;
-
   const text = `Dear ${booking.guestName || "Guest"},
 
 Thank you for choosing ${HOTEL_NAME}.
@@ -189,7 +215,9 @@ Thank you for choosing ${HOTEL_NAME}.
 We have received your booking request and it is currently in PENDING status.
 
 Booking details:
-- Room: ${room?.roomNumber || "N/A"} ${room?.type ? `(${room.type})` : ""}
+- Room: ${room?.roomNumber || "N/A"} ${
+    room?.type ? `(${room.type})` : ""
+  }
 - Check-in: ${formatDate(booking.checkInDate)}
 - Check-out: ${formatDate(booking.checkOutDate)}
 - Guests: ${booking.numGuests || 1}
@@ -205,20 +233,18 @@ ${HOTEL_NAME}
   await sendBasicEmail(booking.guestEmail, subject, text);
 }
 
-/**
- * Booking confirmed from admin panel (pending → confirmed)
- */
 async function sendBookingConfirmedEmail(booking, room) {
   if (!booking?.guestEmail) return;
 
   const subject = `Your booking is confirmed – ${HOTEL_NAME}`;
-
   const text = `Dear ${booking.guestName || "Guest"},
 
 Good news! Your booking at ${HOTEL_NAME} has been CONFIRMED.
 
 Booking details:
-- Room: ${room?.roomNumber || "N/A"} ${room?.type ? `(${room.type})` : ""}
+- Room: ${room?.roomNumber || "N/A"} ${
+    room?.type ? `(${room.type})` : ""
+  }
 - Check-in: ${formatDate(booking.checkInDate)}
 - Check-out: ${formatDate(booking.checkOutDate)}
 - Guests: ${booking.numGuests || 1}
@@ -235,10 +261,9 @@ ${HOTEL_NAME}
   await sendBasicEmail(booking.guestEmail, subject, text);
 }
 
-/**
- * ========== NEW: PASSWORD RESET EMAIL ==========
- */
-
+// --------------------------------------------------
+//  PASSWORD RESET EMAIL
+// --------------------------------------------------
 async function sendPasswordResetCodeEmail(user, code) {
   if (!user?.email) return;
 
@@ -261,6 +286,7 @@ ${HOTEL_NAME}
 }
 
 module.exports = {
+  transporter, // optional – useful for future debug routes
   sendInvoiceEmail,
   sendWelcomeEmail,
   sendLoginAlertEmail,
