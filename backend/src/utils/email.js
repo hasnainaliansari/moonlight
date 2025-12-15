@@ -2,6 +2,16 @@
 const { google } = require("googleapis");
 const MailComposer = require("nodemailer/lib/mail-composer");
 
+const {
+  welcomeTemplate,
+  loginAlertTemplate,
+  passwordResetCodeTemplate,
+  bookingPendingTemplate,
+  bookingConfirmedTemplate,
+  invoiceTemplate,
+  formatDate, // (optional helpers)
+} = require("./emailTemplates");
+
 const HOTEL_NAME = process.env.HOTEL_NAME || "Moonlight Hotel";
 
 function base64UrlEncode(buf) {
@@ -47,7 +57,12 @@ function getFrom(settings) {
   return `"${name}" <${sender}>`;
 }
 
-async function sendEmail({ to, subject, text, attachments, settings }) {
+/**
+ * ✅ Now supports html + text both.
+ * - Always send text fallback (recommended)
+ * - HTML templates plug-and-play
+ */
+async function sendEmail({ to, subject, text, html, attachments, settings }) {
   if (!to) return;
 
   const gmail = await getGmailService();
@@ -56,7 +71,8 @@ async function sendEmail({ to, subject, text, attachments, settings }) {
     from: getFrom(settings),
     to,
     subject,
-    text,
+    text: text || "", // fallback
+    html: html || undefined, // ✅ html templates
     attachments: attachments || [],
   });
 
@@ -71,9 +87,9 @@ async function sendEmail({ to, subject, text, attachments, settings }) {
   console.log("[email] Sent (Gmail API):", subject, "→", to);
 }
 
-async function sendBasicEmail(to, subject, text, settings) {
+async function sendBasicEmail(to, subject, text, settings, html) {
   try {
-    await sendEmail({ to, subject, text, settings });
+    await sendEmail({ to, subject, text, html, settings });
   } catch (err) {
     console.error("[email] Gmail API send FAILED:", {
       to,
@@ -89,28 +105,15 @@ async function sendBasicEmail(to, subject, text, settings) {
 const sendInvoiceEmail = async (invoice, pdfBuffer, settings) => {
   if (!invoice?.guestEmail) return;
 
-  const hotelName = settings?.hotelName || HOTEL_NAME;
-  const subject = `Your invoice ${invoice.invoiceNumber || ""} – ${hotelName}`;
-
-  const textBody = `
-Dear ${invoice.guestName || "Guest"},
-
-Thank you for staying at ${hotelName}.
-Attached is your invoice ${invoice.invoiceNumber || ""} for your recent stay.
-
-Total amount: ${invoice.currencyCode || "USD"} ${invoice.totalAmount}
-
-Best regards,
-${hotelName}
-`.trim();
-
+  const tmpl = invoiceTemplate({ invoice, settings });
   const fileName = `invoice-${invoice.invoiceNumber || invoice._id}.pdf`;
 
   try {
     await sendEmail({
       to: invoice.guestEmail,
-      subject,
-      text: textBody,
+      subject: tmpl.subject,
+      text: tmpl.text,
+      html: tmpl.html,
       attachments: [
         {
           filename: fileName,
@@ -123,7 +126,7 @@ ${hotelName}
   } catch (err) {
     console.error("[email] Gmail API invoice FAILED:", {
       to: invoice.guestEmail,
-      subject,
+      subject: tmpl.subject,
       message: err.message,
       code: err.code,
       details: err?.response?.data,
@@ -131,23 +134,16 @@ ${hotelName}
   }
 };
 
-// ---------------- Other existing functions (same names) ----------------
-async function sendWelcomeEmail(user) {
+// ---------------- Welcome ----------------
+async function sendWelcomeEmail(user, settings) {
   if (!user?.email) return;
 
-  const subject = `Welcome to ${HOTEL_NAME}`;
-  const text = `Dear ${user.name || "Guest"},
-
-Your account at ${HOTEL_NAME} has been created successfully.
-
-Warm regards,
-${HOTEL_NAME}
-`;
-
-  await sendBasicEmail(user.email, subject, text);
+  const tmpl = welcomeTemplate({ user, settings });
+  await sendBasicEmail(user.email, tmpl.subject, tmpl.text, settings, tmpl.html);
 }
 
-async function sendLoginAlertEmail(user) {
+// ---------------- Login Alert ----------------
+async function sendLoginAlertEmail(user, settings) {
   if (!user?.email) return;
 
   const loginTime = new Date().toLocaleString("en-US", {
@@ -158,111 +154,56 @@ async function sendLoginAlertEmail(user) {
     minute: "2-digit",
   });
 
-  const subject = `New login to your ${HOTEL_NAME} account`;
-  const text = `Hello ${user.name || "Guest"},
-
-We detected a new login to your ${HOTEL_NAME} account.
-
-Time: ${loginTime}
-
-If this was you, no action is needed.
-If you did NOT perform this login, please reset your password or contact our team.
-
-Thank you,
-${HOTEL_NAME}
-`;
-
-  await sendBasicEmail(user.email, subject, text);
+  const tmpl = loginAlertTemplate({ user, loginTime, settings });
+  await sendBasicEmail(user.email, tmpl.subject, tmpl.text, settings, tmpl.html);
 }
 
-function formatDate(d) {
-  if (!d) return "";
-  return new Date(d).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-}
-
-async function sendBookingPendingEmail(booking, room) {
+// ---------------- Booking Pending ----------------
+async function sendBookingPendingEmail(booking, room, settings) {
   if (!booking?.guestEmail) return;
 
-  const subject = `Your booking request is pending – ${HOTEL_NAME}`;
-  const text = `Dear ${booking.guestName || "Guest"},
-
-Thank you for choosing ${HOTEL_NAME}.
-
-We have received your booking request and it is currently in PENDING status.
-
-Booking details:
-- Room: ${room?.roomNumber || "N/A"} ${room?.type ? `(${room.type})` : ""}
-- Check-in: ${formatDate(booking.checkInDate)}
-- Check-out: ${formatDate(booking.checkOutDate)}
-- Guests: ${booking.numGuests || 1}
-- Total: $${booking.totalPrice}
-
-Our team will review your request and confirm it as soon as possible.
-You will receive another email when your booking is confirmed.
-
-Warm regards,
-${HOTEL_NAME}
-`;
-
-  await sendBasicEmail(booking.guestEmail, subject, text);
+  const tmpl = bookingPendingTemplate({ booking, room, settings });
+  await sendBasicEmail(
+    booking.guestEmail,
+    tmpl.subject,
+    tmpl.text,
+    settings,
+    tmpl.html
+  );
 }
 
-async function sendBookingConfirmedEmail(booking, room) {
+// ---------------- Booking Confirmed ----------------
+async function sendBookingConfirmedEmail(booking, room, settings) {
   if (!booking?.guestEmail) return;
 
-  const subject = `Your booking is confirmed – ${HOTEL_NAME}`;
-  const text = `Dear ${booking.guestName || "Guest"},
-
-Good news! Your booking at ${HOTEL_NAME} has been CONFIRMED.
-
-Booking details:
-- Room: ${room?.roomNumber || "N/A"} ${room?.type ? `(${room.type})` : ""}
-- Check-in: ${formatDate(booking.checkInDate)}
-- Check-out: ${formatDate(booking.checkOutDate)}
-- Guests: ${booking.numGuests || 1}
-- Total: $${booking.totalPrice}
-
-We look forward to welcoming you.
-
-If you need to change or cancel your booking, please contact us and mention your booking dates and room number.
-
-See you soon,
-${HOTEL_NAME}
-`;
-
-  await sendBasicEmail(booking.guestEmail, subject, text);
+  const tmpl = bookingConfirmedTemplate({ booking, room, settings });
+  await sendBasicEmail(
+    booking.guestEmail,
+    tmpl.subject,
+    tmpl.text,
+    settings,
+    tmpl.html
+  );
 }
 
-async function sendPasswordResetCodeEmail(user, code) {
+// ---------------- Password Reset Code ----------------
+async function sendPasswordResetCodeEmail(user, code, settings) {
   if (!user?.email) return;
 
-  const subject = `Your ${HOTEL_NAME} password reset code`;
-  const text = `Hello ${user.name || "Guest"},
-
-You requested to reset the password for your ${HOTEL_NAME} account.
-
-Your one-time reset code is:
-
-${code}
-
-This code will expire in 10 minutes. If you did not request this, you can safely ignore this email.
-
-Thank you,
-${HOTEL_NAME}
-`;
-
-  await sendBasicEmail(user.email, subject, text);
+  const tmpl = passwordResetCodeTemplate({ user, code, settings });
+  await sendBasicEmail(user.email, tmpl.subject, tmpl.text, settings, tmpl.html);
 }
 
 module.exports = {
+  // low-level
+  sendEmail,
+  // high-level
   sendInvoiceEmail,
   sendWelcomeEmail,
   sendLoginAlertEmail,
   sendBookingPendingEmail,
   sendBookingConfirmedEmail,
   sendPasswordResetCodeEmail,
+  // optional helper export
+  formatDate,
 };
