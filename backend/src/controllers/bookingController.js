@@ -174,8 +174,7 @@ const createSelfBooking = async (req, res) => {
     // -----------------------------------
     //  EMAIL + NAME RESOLUTION
     // -----------------------------------
-    let rawEmail =
-      (req.user && req.user.email) || req.body.guestEmail || null;
+    let rawEmail = (req.user && req.user.email) || req.body.guestEmail || null;
     let guestName = req.user?.name || req.body.guestName || "";
 
     // If JWT does not have an email, load the user from DB
@@ -254,7 +253,9 @@ const createSelfBooking = async (req, res) => {
     });
 
     // Email: booking pending
-    sendBookingPendingEmail(booking, room);
+    sendBookingPendingEmail(booking, room).catch((err) =>
+      console.error("Pending email failed:", err?.message)
+    );
 
     res.status(201).json({
       message:
@@ -328,7 +329,9 @@ const confirmBooking = async (req, res) => {
     }
 
     // Email: booking confirmed
-    sendBookingConfirmedEmail(booking, booking.room);
+    sendBookingConfirmedEmail(booking, booking.room).catch((err) =>
+      console.error("Confirm email failed:", err?.message)
+    );
 
     res.json({
       message: "Booking confirmed successfully",
