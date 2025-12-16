@@ -1,6 +1,8 @@
+// src/routes/maintenanceRoutes.js
 const express = require("express");
 const {
   createTicket,
+  createRequest,
   getTickets,
   getMyTickets,
   updateTicketStatus,
@@ -9,8 +11,14 @@ const { protect, requireRole } = require("../middleware/authMiddleware");
 
 const router = express.Router();
 
-// Login required for all routes
 router.use(protect);
+
+// ✅ Guest request
+router.post(
+  "/requests",
+  requireRole("guest"),
+  createRequest
+);
 
 // My tickets – maintenance / manager / admin
 router.get(
@@ -26,7 +34,7 @@ router.get(
   getTickets
 );
 
-// Create ticket – any operations role that reports an issue
+// Create ticket – ops roles (staff)
 router.post(
   "/tickets",
   requireRole("admin", "manager", "receptionist", "housekeeping"),

@@ -9,7 +9,6 @@ const createTask = async (req, res) => {
   try {
     const { roomId, type, scheduledDate, description, assignedTo } = req.body;
 
-    // Basic required fields
     if (!roomId || !description) {
       return res
         .status(400)
@@ -17,11 +16,8 @@ const createTask = async (req, res) => {
     }
 
     const room = await Room.findById(roomId);
-    if (!room) {
-      return res.status(404).json({ message: "Room not found" });
-    }
+    if (!room) return res.status(404).json({ message: "Room not found" });
 
-    // Validate assignedTo if provided
     if (
       assignedTo &&
       typeof assignedTo === "string" &&
@@ -30,7 +26,6 @@ const createTask = async (req, res) => {
       return res.status(400).json({ message: "Invalid housekeeping staff id" });
     }
 
-    // scheduledDate optional – default: today
     let scheduled = scheduledDate ? new Date(scheduledDate) : new Date();
     scheduled.setHours(0, 0, 0, 0);
 
@@ -41,24 +36,20 @@ const createTask = async (req, res) => {
       description,
       status: "pending",
       createdBy: req.user.id,
-      assignedTo: assignedTo || null, // saving directly here
+      assignedTo: assignedTo || null,
     });
 
-    // Optional: when cleaning task is created, mark room as "cleaning"
+    // Optional: task create pe room "cleaning" set (agar tum already use kar rahe ho)
     if (task.type === "cleaning" && room.status !== "cleaning") {
       room.status = "cleaning";
       await room.save();
     }
 
-    // Populate so the frontend can immediately get the names
     await task.populate("room", "roomNumber type status");
     await task.populate("assignedTo", "name email role");
     await task.populate("createdBy", "name email role");
 
-    res.status(201).json({
-      message: "Housekeeping task created",
-      task,
-    });
+    res.status(201).json({ message: "Housekeeping task created", task });
   } catch (error) {
     console.error("Create housekeeping task error:", error);
     console.error("Request body:", req.body);
@@ -67,37 +58,37 @@ const createTask = async (req, res) => {
 };
 
 // GET /api/housekeeping/tasks
-// List all tasks (for manager/admin/housekeeping)
+// ✅ For housekeeping: only assigned tasks
+// ✅ For admin/manager: all tasks
 const getTasks = async (req, res) => {
   try {
-    const tasks = await HousekeepingTask.find()
+    const filter = {};
+
+    if (req.user?.role === "housekeeping") {
+      filter.assignedTo = req.user.id;
+    }
+
+    const tasks = await HousekeepingTask.find(filter)
       .populate("room", "roomNumber type status")
       .populate("assignedTo", "name email role")
       .populate("createdBy", "name email role")
       .sort({ scheduledDate: 1, createdAt: -1 });
 
-    res.json({
-      count: tasks.length,
-      tasks,
-    });
+    res.json({ count: tasks.length, tasks });
   } catch (error) {
     console.error("Get housekeeping tasks error:", error);
     res.status(500).json({ message: "Server error" });
   }
 };
 
-// GET /api/housekeeping/my-tasks
-// For housekeeping staff: only their own tasks
+// GET /api/housekeeping/my-tasks (optional, still supported)
 const getMyTasks = async (req, res) => {
   try {
     const tasks = await HousekeepingTask.find({ assignedTo: req.user.id })
       .populate("room", "roomNumber type status")
       .sort({ scheduledDate: 1, createdAt: -1 });
 
-    res.json({
-      count: tasks.length,
-      tasks,
-    });
+    res.json({ count: tasks.length, tasks });
   } catch (error) {
     console.error("Get my housekeeping tasks error:", error);
     res.status(500).json({ message: "Server error" });
@@ -105,44 +96,61 @@ const getMyTasks = async (req, res) => {
 };
 
 // PATCH /api/housekeeping/tasks/:id/status
-// Update status (housekeeping / manager / admin)
 const updateTaskStatus = async (req, res) => {
   try {
-    const { status } = req.body;
-    const allowed = ["pending", "in_progress", "done"];
+    let { status } = req.body;
 
+    // allow "completed" as alias
+    if (status === "completed") status = "done";
+
+    const allowed = ["pending", "in_progress", "done"];
     if (!allowed.includes(status)) {
       return res.status(400).json({
-        message: `Invalid status. Allowed: ${allowed.join(", ")}`,
+        message: `Invalid status. Allowed: ${allowed.join(", ")} (or "completed")`,
       });
     }
 
-    const task = await HousekeepingTask.findById(req.params.id).populate(
-      "room"
-    );
+    const task = await HousekeepingTask.findById(req.params.id).populate("room");
+    if (!task) return res.status(404).json({ message: "Task not found" });
 
-    if (!task) {
-      return res.status(404).json({ message: "Task not found" });
+    // ✅ Security: housekeeping can update ONLY their own assigned tasks
+    if (req.user?.role === "housekeeping") {
+      const assignedId = task.assignedTo ? String(task.assignedTo) : "";
+      if (!assignedId || assignedId !== String(req.user.id)) {
+        return res.status(403).json({
+          message: "Access denied. You can update only your assigned tasks.",
+        });
+      }
     }
 
     task.status = status;
 
+    // If started, optionally mark room as cleaning
+    if (status === "in_progress" && task.type === "cleaning" && task.room) {
+      if (task.room.status !== "cleaning") {
+        task.room.status = "cleaning";
+        await task.room.save();
+      }
+    }
+
     if (status === "done") {
       task.completedAt = new Date();
 
-      // If room was "cleaning" → mark as available
-      if (task.room && task.room.status === "cleaning") {
-        task.room.status = "available";
-        await task.room.save();
+      // ✅ Fix: Done pe room available kar do (cleaning task)
+      // (avoid overriding occupied/maintenance if you use those states)
+      if (task.type === "cleaning" && task.room) {
+        const current = task.room.status;
+
+        if (current !== "occupied" && current !== "maintenance") {
+          task.room.status = "available";
+          await task.room.save();
+        }
       }
     }
 
     await task.save();
 
-    res.json({
-      message: "Housekeeping task updated",
-      task,
-    });
+    res.json({ message: "Housekeeping task updated", task });
   } catch (error) {
     console.error("Update housekeeping task error:", error);
     res.status(500).json({ message: "Server error" });

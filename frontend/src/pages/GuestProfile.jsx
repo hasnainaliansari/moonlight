@@ -1,3 +1,4 @@
+// src/pages/GuestProfile.jsx
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
@@ -47,6 +48,14 @@ function GuestProfile() {
   const [comment, setComment] = useState("");
   const [submittingReview, setSubmittingReview] = useState(false);
   const [reviewMessage, setReviewMessage] = useState("");
+
+  // ✅ NEW: Maintenance request form (guest)
+  const [issueType, setIssueType] = useState("ac");
+  const [issueNotes, setIssueNotes] = useState("");
+  const [issuePriority, setIssuePriority] = useState("normal");
+  const [issuePhotoUrl, setIssuePhotoUrl] = useState("");
+  const [submittingIssue, setSubmittingIssue] = useState(false);
+  const [issueMessage, setIssueMessage] = useState("");
 
   // Load profile from API
   useEffect(() => {
@@ -179,7 +188,6 @@ function GuestProfile() {
     : "Guest";
 
   // ----- handlers -----
-
   const handleDetailsChange = (e) => {
     const { name, value } = e.target;
     setDetailsForm((f) => ({ ...f, [name]: value }));
@@ -203,7 +211,6 @@ function GuestProfile() {
       const res = await api.patch("/profile/me", payload);
       setProfile(res.data);
 
-      // Also update the user in the auth context (for the name change).
       if (res.data?.user) {
         setUser((prev) =>
           prev
@@ -292,6 +299,65 @@ function GuestProfile() {
       );
     } finally {
       setSubmittingReview(false);
+    }
+  };
+
+  // ✅ NEW: Submit maintenance issue
+  const handleSubmitIssue = async (e) => {
+    e.preventDefault();
+    setIssueMessage("");
+
+    if (!currentBooking) {
+      setIssueMessage("You can report an issue only during an active stay.");
+      return;
+    }
+
+    const roomId = currentBooking?.room?._id;
+    const bookingId = currentBooking?._id;
+
+    if (!roomId || !bookingId) {
+      setIssueMessage("Unable to detect your current room/booking.");
+      return;
+    }
+
+    const issueTypeLabel =
+      issueType === "ac"
+        ? "AC not working"
+        : issueType === "plumbing"
+        ? "Plumbing issue"
+        : issueType === "electric"
+        ? "Electrical issue"
+        : issueType === "wifi"
+        ? "Wi-Fi / Internet issue"
+        : issueType === "tv"
+        ? "TV / Remote issue"
+        : issueType === "noise"
+        ? "Noise complaint"
+        : "Other issue";
+
+    setSubmittingIssue(true);
+    try {
+      await api.post("/maintenance/requests", {
+        roomId,
+        bookingId,
+        issue: issueTypeLabel,
+        notes: issueNotes || "",
+        priority: issuePriority,
+        photoUrl: issuePhotoUrl || "",
+      });
+
+      setIssueMessage("Thanks! Your request has been submitted.");
+      setIssueNotes("");
+      setIssuePriority("normal");
+      setIssuePhotoUrl("");
+      setIssueType("ac");
+    } catch (err) {
+      console.error("Submit maintenance request error", err);
+      setIssueMessage(
+        err?.response?.data?.message || "Unable to submit request right now."
+      );
+    } finally {
+      setSubmittingIssue(false);
     }
   };
 
@@ -513,6 +579,98 @@ function GuestProfile() {
         </div>
       </section>
 
+      {/* ✅ NEW: Report an issue (Guest) */}
+      <section className="g-guest-profile-grid">
+        <div className="g-room-block">
+          <h2 className="g-room-subtitle">Report an issue</h2>
+
+          {!currentBooking ? (
+            <p className="g-room-text-muted">
+              You can report maintenance issues only during an active stay.
+              If you are not checked in, this option will appear once your stay begins.
+            </p>
+          ) : (
+            <form onSubmit={handleSubmitIssue} className="g-review-form">
+              <div className="g-review-field">
+                <label className="g-meta-label">Current room</label>
+                <div className="g-review-input" style={{ display: "flex", alignItems: "center" }}>
+                  #{currentBooking.room?.roomNumber} ({currentBooking.room?.type})
+                </div>
+              </div>
+
+              <div className="g-review-field">
+                <label className="g-meta-label">Issue type</label>
+                <select
+                  className="g-review-input"
+                  value={issueType}
+                  onChange={(e) => setIssueType(e.target.value)}
+                >
+                  <option value="ac">AC not working</option>
+                  <option value="plumbing">Plumbing issue</option>
+                  <option value="electric">Electrical issue</option>
+                  <option value="wifi">Wi-Fi / Internet issue</option>
+                  <option value="tv">TV / Remote issue</option>
+                  <option value="noise">Noise complaint</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+
+              <div className="g-review-field">
+                <label className="g-meta-label">Priority</label>
+                <select
+                  className="g-review-input"
+                  value={issuePriority}
+                  onChange={(e) => setIssuePriority(e.target.value)}
+                >
+                  <option value="low">Low</option>
+                  <option value="normal">Normal</option>
+                  <option value="high">High</option>
+                </select>
+              </div>
+
+              <div className="g-review-field">
+                <label className="g-meta-label">Notes (optional)</label>
+                <textarea
+                  className="g-review-input"
+                  rows={3}
+                  placeholder="Describe the issue (e.g. AC making noise, not cooling after 30 minutes)..."
+                  value={issueNotes}
+                  onChange={(e) => setIssueNotes(e.target.value)}
+                />
+              </div>
+
+              <div className="g-review-field">
+                <label className="g-meta-label">Photo URL (optional)</label>
+                <input
+                  className="g-review-input"
+                  placeholder="https://..."
+                  value={issuePhotoUrl}
+                  onChange={(e) => setIssuePhotoUrl(e.target.value)}
+                />
+              </div>
+
+              {issueMessage && <div className="g-review-message">{issueMessage}</div>}
+
+              <button
+                type="submit"
+                className="g-book-btn g-book-btn-lg g-review-submit"
+                disabled={submittingIssue}
+              >
+                {submittingIssue ? "Submitting..." : "Submit request"}
+              </button>
+            </form>
+          )}
+        </div>
+
+        <div className="g-room-block">
+          <h2 className="g-room-subtitle">Tips</h2>
+          <p className="g-room-text-muted">
+            For urgent issues, please contact the front desk as well.
+            Maintenance requests are tracked and assigned to the team automatically.
+          </p>
+        </div>
+      </section>
+
       {/* History + reviews */}
       <section className="g-guest-profile-grid">
         {/* Booking history table */}
@@ -653,9 +811,7 @@ function GuestProfile() {
                       {"☆".repeat(5 - r.rating)}
                     </div>
                   </div>
-                  {r.comment && (
-                    <p className="g-review-comment">{r.comment}</p>
-                  )}
+                  {r.comment && <p className="g-review-comment">{r.comment}</p>}
                 </div>
               ))}
             </div>

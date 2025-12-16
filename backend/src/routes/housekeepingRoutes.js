@@ -10,7 +10,6 @@ const { protect, requireRole } = require("../middleware/authMiddleware");
 
 const router = express.Router();
 
-// All housekeeping routes require login
 router.use(protect);
 
 // My tasks – housekeeping staff / manager / admin
@@ -20,7 +19,7 @@ router.get(
   getMyTasks
 );
 
-// All tasks – manager/admin/housekeeping
+// ✅ tasks list – housekeeping/manager/admin
 router.get(
   "/tasks",
   requireRole("housekeeping", "manager", "admin"),
@@ -34,9 +33,16 @@ router.post(
   createTask
 );
 
-// Update status – housekeeping/manager/admin
+// Update status – housekeeping/manager/admin (old)
 router.patch(
   "/tasks/:id/status",
+  requireRole("housekeeping", "manager", "admin"),
+  updateTaskStatus
+);
+
+// ✅ Update status – housekeeping/manager/admin (new - brief)
+router.patch(
+  "/tasks/:id",
   requireRole("housekeeping", "manager", "admin"),
   updateTaskStatus
 );

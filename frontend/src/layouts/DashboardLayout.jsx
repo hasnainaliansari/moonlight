@@ -1,3 +1,4 @@
+// src/layouts/DashboardLayout.jsx
 import { NavLink, Outlet } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
@@ -13,8 +14,15 @@ const navLinkStyle = ({ isActive }) => ({
 
 function DashboardLayout() {
   const { user, logout } = useAuth();
-
   const role = user?.role || "";
+
+  const isAdmin = role === "admin";
+  const isManager = role === "manager";
+  const isReceptionist = role === "receptionist";
+  const isHousekeeping = role === "housekeeping";
+  const isMaintenance = role === "maintenance";
+
+  const isOps = isAdmin || isManager || isReceptionist;
 
   return (
     <div
@@ -24,11 +32,9 @@ function DashboardLayout() {
         display: "flex",
         background: "#020617",
         color: "#e5e7eb",
-        fontFamily:
-          "system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
+        fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
       }}
     >
-      {/* Sidebar */}
       <aside
         style={{
           width: 230,
@@ -48,77 +54,82 @@ function DashboardLayout() {
         </div>
 
         <nav style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-          {/* sab roles ke liye */}
-          <NavLink to="/dashboard" style={navLinkStyle}>
-            Dashboard
-          </NavLink>
-
-          {/* operations */}
-          <NavLink to="/rooms" style={navLinkStyle}>
-            Rooms
-          </NavLink>
-
-          <NavLink to="/bookings" style={navLinkStyle}>
-            Bookings
-          </NavLink>
-
-          <NavLink to="/invoices" style={navLinkStyle}>
-            Invoices
-          </NavLink>
-
-          {/* 🟢 Reviews – admin / manager / receptionist */}
-          {(role === "admin" ||
-            role === "manager" ||
-            role === "receptionist") && (
-            <NavLink to="/reviews-admin" style={navLinkStyle}>
-              Reviews
-            </NavLink>
-          )}
-
-          {/* housekeeping menu: admin / manager / housekeeping */}
-          {(role === "admin" ||
-            role === "manager" ||
-            role === "housekeeping") && (
+          {/* ✅ Housekeeping: only housekeeping */}
+          {isHousekeeping && (
             <NavLink to="/housekeeping" style={navLinkStyle}>
               Housekeeping
             </NavLink>
           )}
 
-          {/* maintenance menu: admin / manager / maintenance */}
-          {(role === "admin" ||
-            role === "manager" ||
-            role === "maintenance") && (
+          {/* ✅ Maintenance: only maintenance */}
+          {isMaintenance && (
             <NavLink to="/maintenance" style={navLinkStyle}>
               Maintenance
             </NavLink>
           )}
 
-          {/* reports: admin / manager */}
-          {(role === "admin" || role === "manager") && (
-            <NavLink to="/reports" style={navLinkStyle}>
-              Reports
-            </NavLink>
-          )}
+          {/* ✅ Other staff roles */}
+          {!isHousekeeping && !isMaintenance && (
+            <>
+              <NavLink to="/dashboard" style={navLinkStyle}>
+                Dashboard
+              </NavLink>
 
-          {/* staff management – sirf admin/manager */}
-          {(role === "admin" || role === "manager") && (
-            <NavLink to="/staff" style={navLinkStyle}>
-              Staff
-            </NavLink>
-          )}
+              <NavLink to="/rooms" style={navLinkStyle}>
+                Rooms
+              </NavLink>
 
-          {/* guests menu: admin / manager */}
-          {(role === "admin" || role === "manager") && (
-            <NavLink to="/guests" style={navLinkStyle}>
-              Guests
-            </NavLink>
-          )}
+              <NavLink to="/bookings" style={navLinkStyle}>
+                Bookings
+              </NavLink>
 
-          {/* settings: admin / manager */}
-          {(role === "admin" || role === "manager") && (
-            <NavLink to="/settings" style={navLinkStyle}>
-              Settings
-            </NavLink>
+              <NavLink to="/invoices" style={navLinkStyle}>
+                Invoices
+              </NavLink>
+
+              {(isAdmin || isManager || isReceptionist) && (
+                <NavLink to="/reviews-admin" style={navLinkStyle}>
+                  Reviews
+                </NavLink>
+              )}
+
+              {(isAdmin || isManager) && (
+                <NavLink to="/reports" style={navLinkStyle}>
+                  Reports
+                </NavLink>
+              )}
+
+              {(isAdmin || isManager) && (
+                <NavLink to="/staff" style={navLinkStyle}>
+                  Staff
+                </NavLink>
+              )}
+
+              {(isAdmin || isManager) && (
+                <NavLink to="/guests" style={navLinkStyle}>
+                  Guests
+                </NavLink>
+              )}
+
+              {(isAdmin || isManager) && (
+                <NavLink to="/settings" style={navLinkStyle}>
+                  Settings
+                </NavLink>
+              )}
+
+              {/* Housekeeping + Maintenance pages still visible to admin/manager */}
+              {(isAdmin || isManager) && (
+                <NavLink to="/housekeeping" style={navLinkStyle}>
+                  Housekeeping
+                </NavLink>
+              )}
+
+              {(isAdmin || isManager) && (
+                <NavLink to="/maintenance" style={navLinkStyle}>
+                  Maintenance
+                </NavLink>
+              )}
+            </>
           )}
         </nav>
 
@@ -157,7 +168,6 @@ function DashboardLayout() {
         </div>
       </aside>
 
-      {/* Main content */}
       <main
         style={{
           flex: 1,

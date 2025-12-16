@@ -9,7 +9,13 @@ const maintenanceSchema = new mongoose.Schema(
       required: true,
     },
 
-    // Issue description shown in UI
+    // ✅ optional link to booking (guest can select current booking)
+    booking: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Booking",
+      default: null,
+    },
+
     issue: {
       type: String,
       required: true,
@@ -38,16 +44,31 @@ const maintenanceSchema = new mongoose.Schema(
       trim: true,
     },
 
+    // ✅ optional photo (string URL). You can later wire uploadMiddleware.
+    photoUrl: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+
     assignedTo: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User", // maintenance staff
+      ref: "User",
       default: null,
     },
 
+    // existing staff creator
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User", // who created ticket (manager / receptionist / admin)
+      ref: "User",
       required: true,
+    },
+
+    // ✅ NEW: if created by guest, store here as well (still keep createdBy required)
+    createdByGuest: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
     },
 
     resolvedAt: {
