@@ -38,11 +38,15 @@ const roomSchema = new mongoose.Schema(
       required: true,
       min: 0,
     },
+
     status: {
       type: String,
-      enum: ["available", "occupied", "cleaning", "maintenance"],
+      // ✅ Added: needs_cleaning (P1.2)
+      // Keeping existing values for backward compatibility
+      enum: ["available", "occupied", "needs_cleaning", "cleaning", "maintenance"],
       default: "available",
     },
+
     capacity: {
       type: Number,
       default: 2,

@@ -1,4 +1,6 @@
 // src/controllers/bookingController.js
+const crypto = require("crypto");
+
 const Booking = require("../models/Booking");
 const Room = require("../models/Room");
 const Guest = require("../models/Guest");
@@ -15,6 +17,12 @@ const calculateNights = (checkInDate, checkOutDate) => {
   const diffMs = outDate - inDate;
   const nights = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
   return nights;
+};
+
+// ✅ Helper: generate check-in key
+const generateCheckInKey = () => {
+  // 8 chars hex key
+  return crypto.randomBytes(4).toString("hex");
 };
 
 /**
@@ -351,14 +359,40 @@ const checkInBooking = async (req, res) => {
       return res.status(404).json({ message: "Booking not found" });
     }
 
+    // ✅ basic validation
+    if (booking.status === "cancelled") {
+      return res.status(400).json({ message: "Cancelled booking cannot be checked in." });
+    }
+
+    if (booking.status === "checked_out") {
+      return res.status(400).json({ message: "Checked-out booking cannot be checked in." });
+    }
+
+    // ✅ If already checked in, keep existing key (idempotent)
+    if (booking.status === "checked_in" && booking.checkInKey) {
+      return res.json({
+        message: "Guest already checked in",
+        booking,
+      });
+    }
+
+    // ✅ generate & store key
+    const key = generateCheckInKey();
+    booking.checkInKey = key;
+
+    // optional expiry: set to checkout date
+    booking.keyExpiresAt = booking.checkOutDate ? new Date(booking.checkOutDate) : null;
+
     booking.status = "checked_in";
     await booking.save();
 
-    booking.room.status = "occupied";
-    await booking.room.save();
+    if (booking.room) {
+      booking.room.status = "occupied";
+      await booking.room.save();
+    }
 
     res.json({
-      message: "Guest checked in",
+      message: "Guest checked in (key generated)",
       booking,
     });
   } catch (error) {
@@ -375,14 +409,28 @@ const checkOutBooking = async (req, res) => {
       return res.status(404).json({ message: "Booking not found" });
     }
 
+    // ✅ basic validation
+    if (booking.status !== "checked_in") {
+      return res.status(400).json({
+        message: "Only checked-in bookings can be checked out.",
+      });
+    }
+
     booking.status = "checked_out";
+
+    // ✅ expire key on checkout (keep it for audit, but expire it)
+    booking.keyExpiresAt = new Date();
+
     await booking.save();
 
-    booking.room.status = "available";
-    await booking.room.save();
+    // ✅ P1.2 requirement: after checkout -> needs_cleaning
+    if (booking.room) {
+      booking.room.status = "needs_cleaning";
+      await booking.room.save();
+    }
 
     res.json({
-      message: "Guest checked out",
+      message: "Guest checked out (room marked needs_cleaning)",
       booking,
     });
   } catch (error) {
