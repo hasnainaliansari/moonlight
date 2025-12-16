@@ -8,6 +8,7 @@ const {
   passwordResetCodeTemplate,
   bookingPendingTemplate,
   bookingConfirmedTemplate,
+  bookingCheckInKeyTemplate, // ✅ NEW
   invoiceTemplate,
   formatDate, // (optional helpers)
 } = require("./emailTemplates");
@@ -186,6 +187,22 @@ async function sendBookingConfirmedEmail(booking, room, settings) {
   );
 }
 
+// ---------------- ✅ Booking Checked-in (Send Key) ----------------
+async function sendBookingCheckInKeyEmail(booking, room, settings) {
+  if (!booking?.guestEmail) return;
+
+  // if key not present, still send a generic email (but better to require it)
+  const tmpl = bookingCheckInKeyTemplate({ booking, room, settings });
+
+  await sendBasicEmail(
+    booking.guestEmail,
+    tmpl.subject,
+    tmpl.text,
+    settings,
+    tmpl.html
+  );
+}
+
 // ---------------- Password Reset Code ----------------
 async function sendPasswordResetCodeEmail(user, code, settings) {
   if (!user?.email) return;
@@ -203,6 +220,7 @@ module.exports = {
   sendLoginAlertEmail,
   sendBookingPendingEmail,
   sendBookingConfirmedEmail,
+  sendBookingCheckInKeyEmail, // ✅ NEW
   sendPasswordResetCodeEmail,
   // optional helper export
   formatDate,

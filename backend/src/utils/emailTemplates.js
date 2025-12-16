@@ -131,7 +131,6 @@ function layout({ title, preheader, bodyHtml, settings }) {
  * Components
  */
 function buttonHtml({ text, href }) {
-  // Email-safe button (gradient-ish fallback)
   const safeText = escapeHtml(text);
   const safeHref = escapeHtml(href || "#");
   return `
@@ -178,6 +177,24 @@ function detailsTableHtml(rows) {
       style="margin-top:10px;border:1px solid rgba(148,163,184,0.35);border-radius:16px;overflow:hidden;background:#ffffff;">
       ${rows.join("")}
     </table>
+  `;
+}
+
+// ✅ NEW: big access code block
+function accessCodeBlockHtml(code) {
+  const safe = escapeHtml(code || "");
+  return `
+    <div style="margin:12px 0 12px;padding:14px 16px;border-radius:18px;background:#fefce8;border:1px solid rgba(148,163,184,0.35);">
+      <div style="font-size:12px;color:#6b7280;letter-spacing:.12em;text-transform:uppercase;margin-bottom:6px;">
+        Room Access Code
+      </div>
+      <div style="font-size:26px;letter-spacing:6px;font-weight:900;color:#111827;">
+        ${safe}
+      </div>
+      <div style="margin-top:8px;font-size:12px;color:#6b7280;">
+        Keep this code private.
+      </div>
+    </div>
   `;
 }
 
@@ -359,6 +376,53 @@ function bookingConfirmedTemplate({ booking, room, settings }) {
   };
 }
 
+// ✅ NEW TEMPLATE: Booking Checked-in (Access Code)
+function bookingCheckInKeyTemplate({ booking, room, settings }) {
+  const title = "Checked In";
+  const hotelName = settings?.hotelName || HOTEL_NAME;
+
+  const code = booking?.checkInKey || "";
+  const expires = booking?.keyExpiresAt ? formatDate(booking.keyExpiresAt) : "";
+
+  const rows = [
+    keyValueRow("Room", `${room?.roomNumber || "N/A"}${room?.type ? ` (${room.type})` : ""}`),
+    keyValueRow("Check-in", formatDate(booking?.checkInDate)),
+    keyValueRow("Check-out", formatDate(booking?.checkOutDate)),
+    keyValueRow("Guests", String(booking?.numGuests || 1)),
+    expires ? keyValueRow("Code Expires", expires) : "",
+  ].filter(Boolean);
+
+  const body = `
+    ${pillRowHtml("Stay")}
+    <h2 style="margin:0 0 8px;font-size:18px;color:#111827;">Dear ${escapeHtml(booking?.guestName || "Guest")},</h2>
+    <p style="margin:0 0 12px;color:#4b5563;">
+      Welcome to <b>${escapeHtml(hotelName)}</b>! You are now <b>checked in</b>.
+    </p>
+
+    ${code ? accessCodeBlockHtml(code) : ""}
+
+    ${detailsTableHtml(rows)}
+
+    <p style="margin:12px 0 0;color:#4b5563;">
+      If you experience any issue accessing your room, please contact reception.
+    </p>
+  `;
+
+  const subject = `Your room access code – ${hotelName}`.trim();
+  const text = `Dear ${booking?.guestName || "Guest"},\n\nYou are checked in at ${hotelName}.\nRoom: ${room?.roomNumber || "N/A"}\nAccess Code: ${code || "N/A"}${expires ? `\nExpires: ${expires}` : ""}\n\n— ${hotelName}`;
+
+  return {
+    subject,
+    html: layout({
+      title,
+      preheader: code ? `Your access code: ${code}` : `Checked in at ${hotelName}`,
+      bodyHtml: body,
+      settings,
+    }),
+    text,
+  };
+}
+
 function invoiceTemplate({ invoice, settings }) {
   const title = "Invoice";
   const hotelName = settings?.hotelName || HOTEL_NAME;
@@ -407,6 +471,7 @@ module.exports = {
   passwordResetCodeTemplate,
   bookingPendingTemplate,
   bookingConfirmedTemplate,
+  bookingCheckInKeyTemplate, // ✅ NEW
   invoiceTemplate,
   // export helpers if ever needed
   formatDate,
