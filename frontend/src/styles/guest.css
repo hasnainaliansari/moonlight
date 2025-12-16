@@ -2285,6 +2285,12 @@
   font-size: 11px;
   color: #6b7280;
 }
+/* Treat needs_cleaning same as cleaning */
+.g-room-status-needs_cleaning {
+  background: #fef3c7;
+  color: #92400e;
+}
+
 
 /* ---------- RESPONSIVE ---------- */
 

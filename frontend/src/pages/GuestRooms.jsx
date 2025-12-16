@@ -29,11 +29,26 @@ const STATUS_OPTIONS = [
   { label: "All statuses", value: "all" },
   { label: "Available", value: "available" },
   { label: "Occupied", value: "occupied" },
-  { label: "Cleaning", value: "cleaning" },
+  { label: "Cleaning", value: "cleaning" }, // ✅ this will ALSO include "needs_cleaning"
   { label: "Maintenance", value: "maintenance" },
 ];
 
-// Simple custom select (so browser ka blue dropdown na dikhe)
+// ✅ normalize backend status to UI status buckets
+const normalizeStatus = (s) => {
+  const v = String(s || "").toLowerCase();
+  if (v === "needs_cleaning") return "cleaning";
+  return v;
+};
+
+// ✅ pretty label for badge text
+const formatStatusLabel = (s) => {
+  const v = String(s || "").toLowerCase();
+  if (v === "needs_cleaning") return "Needs cleaning";
+  if (!v) return "";
+  return v.replace(/_/g, " "); // e.g. "checked_in" -> "checked in"
+};
+
+// Simple custom select
 function MoonSelect({ value, onChange, options }) {
   const [open, setOpen] = useState(false);
 
@@ -114,7 +129,10 @@ function GuestRooms() {
     const term = searchTerm.trim().toLowerCase();
 
     if (roomType !== "all" && room.type !== roomType) return false;
-    if (status !== "all" && room.status !== status) return false;
+
+    // ✅ status filter: treat needs_cleaning as cleaning
+    const roomStatus = normalizeStatus(room.status);
+    if (status !== "all" && roomStatus !== status) return false;
 
     const price = Number(room.pricePerNight || 0);
     const min = minPrice ? Number(minPrice) : null;
@@ -128,7 +146,9 @@ function GuestRooms() {
     const textParts = [
       room.roomNumber,
       room.type,
-      room.status,
+      room.status, // raw
+      roomStatus, // normalized
+      formatStatusLabel(room.status), // pretty
       ...(room.features || []),
     ]
       .filter(Boolean)
@@ -164,12 +184,7 @@ function GuestRooms() {
           </label>
           <div className="g-rooms-search">
             <span className="g-rooms-search-icon" aria-hidden="true">
-              <svg
-                viewBox="0 0 24 24"
-                width="14"
-                height="14"
-                aria-hidden="true"
-              >
+              <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
                 <circle
                   cx="11"
                   cy="11"
@@ -271,13 +286,11 @@ function GuestRooms() {
           ) : (
             <div className="g-rooms-grid">
               {filteredRooms.map((room) => {
-                // 1) Choose the raw image (from the database or fallback).
                 const rawImg =
                   room.imageUrl ||
                   ROOM_TYPE_IMAGES[room.type] ||
                   "https://images.unsplash.com/photo-1500534314211-0a24cd07bb5a?auto=format&fit=crop&w=900&q=80";
 
-                // 2) From the helper, return the final URL (convert localhost to Railway, and /uploads to full HTTPS).
                 const imgSrc = resolveMediaUrl(rawImg);
 
                 const typeLabel = room.type
@@ -294,6 +307,10 @@ function GuestRooms() {
                     ? room.capacity
                     : 2;
 
+                // ✅ normalized + pretty label
+                const statusKey = normalizeStatus(room.status); // used for CSS class
+                const statusLabel = formatStatusLabel(room.status);
+
                 return (
                   <button
                     key={room.id}
@@ -308,11 +325,12 @@ function GuestRooms() {
                       <span className="g-room-card-chip">
                         {typeLabel} • Sleeps {capacity}
                       </span>
+
                       {room.status && (
                         <span
-                          className={`g-room-status g-room-status-lg g-room-status-${room.status}`}
+                          className={`g-room-status g-room-status-lg g-room-status-${statusKey}`}
                         >
-                          {room.status}
+                          {statusLabel}
                         </span>
                       )}
                     </div>
