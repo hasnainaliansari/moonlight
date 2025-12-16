@@ -1,6 +1,5 @@
 // src/models/Booking.js
 const mongoose = require("mongoose");
-const crypto = require("crypto");
 
 const bookingSchema = new mongoose.Schema(
   {
@@ -53,14 +52,14 @@ const bookingSchema = new mongoose.Schema(
       default: "confirmed",
     },
 
-    // ✅ Digital room key generated on check-in
+    // ✅ NEW: Digital room key generated on check-in
     checkInKey: {
       type: String,
       trim: true,
       default: null,
     },
 
-    // ✅ Optional expiry
+    // ✅ NEW: Optional expiry (we’ll set it to checkOutDate at check-in, and to now at checkout)
     keyExpiresAt: {
       type: Date,
       default: null,
@@ -80,66 +79,6 @@ const bookingSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
-
-// ---- helpers ----
-function generateRoomKey() {
-  // 8 chars hex
-  return crypto.randomBytes(4).toString("hex");
-}
-
-// ✅ Pre-save: generate key + set expiry + mark email trigger
-bookingSchema.pre("save", function (next) {
-  try {
-    this.$locals = this.$locals || {};
-
-    // When status changes to checked_in
-    if (this.isModified("status") && this.status === "checked_in") {
-      // generate key if missing
-      if (!this.checkInKey) {
-        this.checkInKey = generateRoomKey();
-      }
-
-      // set expiry if missing => default to checkOutDate
-      if (!this.keyExpiresAt && this.checkOutDate) {
-        this.keyExpiresAt = new Date(this.checkOutDate);
-      }
-
-      // mark to send email after save
-      this.$locals._sendCheckInKeyEmail = true;
-    }
-
-    // When status changes to checked_out => expire key now
-    if (this.isModified("status") && this.status === "checked_out") {
-      this.keyExpiresAt = new Date();
-    }
-
-    next();
-  } catch (err) {
-    next(err);
-  }
-});
-
-// ✅ Post-save: send email (non-blocking)
-bookingSchema.post("save", function (doc) {
-  const shouldSend = doc?.$locals?._sendCheckInKeyEmail;
-
-  if (!shouldSend) return;
-
-  (async () => {
-    try {
-      // load room (for email template details)
-      const Room = require("./Room");
-      const room = await Room.findById(doc.room).select("roomNumber type");
-
-      // use existing email util (NO changes in email.js required)
-      const { sendBookingCheckInKeyEmail } = require("../utils/email");
-
-      await sendBookingCheckInKeyEmail(doc, room);
-    } catch (err) {
-      console.error("[Booking model] check-in key email failed:", err?.message);
-    }
-  })();
-});
 
 const Booking = mongoose.model("Booking", bookingSchema);
 
