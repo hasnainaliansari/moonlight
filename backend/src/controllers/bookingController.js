@@ -8,6 +8,7 @@ const User = require("../models/User");
 const {
   sendBookingPendingEmail,
   sendBookingConfirmedEmail,
+  sendBookingCheckInKeyEmail, // ✅ NEW: send key email on check-in
 } = require("../utils/email");
 
 // Helper: calculate nights between 2 dates
@@ -139,9 +140,6 @@ const createBooking = async (req, res) => {
 /**
  * GUEST self-service booking
  * POST /api/bookings/self
- * - User must be authenticated (typically role "guest")
- * - Uses req.user.name / req.user.email as guest identity
- * - Status = "pending" and room.status does not change
  */
 const createSelfBooking = async (req, res) => {
   try {
@@ -255,7 +253,7 @@ const createSelfBooking = async (req, res) => {
       checkInDate: checkIn,
       checkOutDate: checkOut,
       numGuests: numGuests || 1,
-      status: "pending", // guest bookings start as pending
+      status: "pending",
       totalPrice,
       createdBy: req.user.id,
     });
@@ -276,7 +274,7 @@ const createSelfBooking = async (req, res) => {
   }
 };
 
-// GET /api/bookings  (all staff)
+// GET /api/bookings
 const getBookings = async (req, res) => {
   try {
     const bookings = await Booking.find()
@@ -361,11 +359,15 @@ const checkInBooking = async (req, res) => {
 
     // ✅ basic validation
     if (booking.status === "cancelled") {
-      return res.status(400).json({ message: "Cancelled booking cannot be checked in." });
+      return res
+        .status(400)
+        .json({ message: "Cancelled booking cannot be checked in." });
     }
 
     if (booking.status === "checked_out") {
-      return res.status(400).json({ message: "Checked-out booking cannot be checked in." });
+      return res
+        .status(400)
+        .json({ message: "Checked-out booking cannot be checked in." });
     }
 
     // ✅ If already checked in, keep existing key (idempotent)
@@ -381,7 +383,9 @@ const checkInBooking = async (req, res) => {
     booking.checkInKey = key;
 
     // optional expiry: set to checkout date
-    booking.keyExpiresAt = booking.checkOutDate ? new Date(booking.checkOutDate) : null;
+    booking.keyExpiresAt = booking.checkOutDate
+      ? new Date(booking.checkOutDate)
+      : null;
 
     booking.status = "checked_in";
     await booking.save();
@@ -390,6 +394,11 @@ const checkInBooking = async (req, res) => {
       booking.room.status = "occupied";
       await booking.room.save();
     }
+
+    // ✅ SEND CHECK-IN KEY EMAIL (same style as pending/confirmed)
+    sendBookingCheckInKeyEmail(booking, booking.room).catch((err) =>
+      console.error("Check-in key email failed:", err?.message)
+    );
 
     res.json({
       message: "Guest checked in (key generated)",
@@ -439,7 +448,7 @@ const checkOutBooking = async (req, res) => {
   }
 };
 
-// GET /api/bookings/my  (guest self – bookings by their email)
+// GET /api/bookings/my
 const getMyBookings = async (req, res) => {
   try {
     if (!req.user) {
