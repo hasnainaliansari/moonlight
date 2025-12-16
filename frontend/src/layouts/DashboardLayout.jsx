@@ -1,5 +1,5 @@
-// src/layouts/DashboardLayout.jsx
-import { NavLink, Outlet } from "react-router-dom";
+import { useEffect } from "react";
+import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 const navLinkStyle = ({ isActive }) => ({
@@ -16,13 +16,35 @@ function DashboardLayout() {
   const { user, logout } = useAuth();
   const role = user?.role || "";
 
+  const navigate = useNavigate();
+  const location = useLocation();
+
   const isAdmin = role === "admin";
   const isManager = role === "manager";
   const isReceptionist = role === "receptionist";
   const isHousekeeping = role === "housekeeping";
   const isMaintenance = role === "maintenance";
 
-  const isOps = isAdmin || isManager || isReceptionist;
+  // ✅ Fix: staff roles should not land on /dashboard if they don't have a dashboard
+  useEffect(() => {
+    if (!role) return;
+
+    const pathname = location.pathname;
+
+    // home per role
+    const roleHome = isHousekeeping
+      ? "/housekeeping"
+      : isMaintenance
+      ? "/maintenance"
+      : "/dashboard";
+
+    // if app lands on / or /dashboard, redirect maintenance/housekeeping to their pages
+    if (pathname === "/" || pathname === "/dashboard") {
+      if (roleHome !== pathname) {
+        navigate(roleHome, { replace: true });
+      }
+    }
+  }, [role, location.pathname, navigate, isHousekeeping, isMaintenance]);
 
   return (
     <div
@@ -35,6 +57,7 @@ function DashboardLayout() {
         fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
       }}
     >
+      {/* Sidebar */}
       <aside
         style={{
           width: 230,
@@ -54,27 +77,16 @@ function DashboardLayout() {
         </div>
 
         <nav style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-          {/* ✅ Housekeeping: only housekeeping */}
-          {isHousekeeping && (
-            <NavLink to="/housekeeping" style={navLinkStyle}>
-              Housekeeping
+          {/* ✅ Dashboard only for admin/manager/receptionist */}
+          {(isAdmin || isManager || isReceptionist) && (
+            <NavLink to="/dashboard" style={navLinkStyle}>
+              Dashboard
             </NavLink>
           )}
 
-          {/* ✅ Maintenance: only maintenance */}
-          {isMaintenance && (
-            <NavLink to="/maintenance" style={navLinkStyle}>
-              Maintenance
-            </NavLink>
-          )}
-
-          {/* ✅ Other staff roles */}
-          {!isHousekeeping && !isMaintenance && (
+          {/* operations (later hum receptionist/manager rules refine karenge) */}
+          {(isAdmin || isManager || isReceptionist) && (
             <>
-              <NavLink to="/dashboard" style={navLinkStyle}>
-                Dashboard
-              </NavLink>
-
               <NavLink to="/rooms" style={navLinkStyle}>
                 Rooms
               </NavLink>
@@ -86,50 +98,56 @@ function DashboardLayout() {
               <NavLink to="/invoices" style={navLinkStyle}>
                 Invoices
               </NavLink>
-
-              {(isAdmin || isManager || isReceptionist) && (
-                <NavLink to="/reviews-admin" style={navLinkStyle}>
-                  Reviews
-                </NavLink>
-              )}
-
-              {(isAdmin || isManager) && (
-                <NavLink to="/reports" style={navLinkStyle}>
-                  Reports
-                </NavLink>
-              )}
-
-              {(isAdmin || isManager) && (
-                <NavLink to="/staff" style={navLinkStyle}>
-                  Staff
-                </NavLink>
-              )}
-
-              {(isAdmin || isManager) && (
-                <NavLink to="/guests" style={navLinkStyle}>
-                  Guests
-                </NavLink>
-              )}
-
-              {(isAdmin || isManager) && (
-                <NavLink to="/settings" style={navLinkStyle}>
-                  Settings
-                </NavLink>
-              )}
-
-              {/* Housekeeping + Maintenance pages still visible to admin/manager */}
-              {(isAdmin || isManager) && (
-                <NavLink to="/housekeeping" style={navLinkStyle}>
-                  Housekeeping
-                </NavLink>
-              )}
-
-              {(isAdmin || isManager) && (
-                <NavLink to="/maintenance" style={navLinkStyle}>
-                  Maintenance
-                </NavLink>
-              )}
             </>
+          )}
+
+          {/* Reviews – admin/manager/receptionist */}
+          {(isAdmin || isManager || isReceptionist) && (
+            <NavLink to="/reviews-admin" style={navLinkStyle}>
+              Reviews
+            </NavLink>
+          )}
+
+          {/* housekeeping menu: admin / manager / housekeeping */}
+          {(isAdmin || isManager || isHousekeeping) && (
+            <NavLink to="/housekeeping" style={navLinkStyle}>
+              Housekeeping
+            </NavLink>
+          )}
+
+          {/* maintenance menu: admin / manager / maintenance */}
+          {(isAdmin || isManager || isMaintenance) && (
+            <NavLink to="/maintenance" style={navLinkStyle}>
+              Maintenance
+            </NavLink>
+          )}
+
+          {/* reports: admin / manager */}
+          {(isAdmin || isManager) && (
+            <NavLink to="/reports" style={navLinkStyle}>
+              Reports
+            </NavLink>
+          )}
+
+          {/* staff management – admin/manager */}
+          {(isAdmin || isManager) && (
+            <NavLink to="/staff" style={navLinkStyle}>
+              Staff
+            </NavLink>
+          )}
+
+          {/* guests menu: admin / manager */}
+          {(isAdmin || isManager) && (
+            <NavLink to="/guests" style={navLinkStyle}>
+              Guests
+            </NavLink>
+          )}
+
+          {/* settings: admin / manager */}
+          {(isAdmin || isManager) && (
+            <NavLink to="/settings" style={navLinkStyle}>
+              Settings
+            </NavLink>
           )}
         </nav>
 
@@ -168,6 +186,7 @@ function DashboardLayout() {
         </div>
       </aside>
 
+      {/* Main content */}
       <main
         style={{
           flex: 1,

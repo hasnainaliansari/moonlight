@@ -1,4 +1,3 @@
-// src/pages/Housekeeping.jsx
 import { useEffect, useMemo, useState } from "react";
 import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
@@ -7,17 +6,13 @@ function Housekeeping() {
   const { user } = useAuth();
   const role = user?.role || "";
 
-  const isAdmin = role === "admin";
-  const isManager = role === "manager";
-  const isReceptionist = role === "receptionist";
   const isHousekeeping = role === "housekeeping";
-
-  const canAccess = isAdmin || isManager || isHousekeeping || isReceptionist;
-  const canCreateTask = isAdmin || isManager || isReceptionist; // admin/manager/receptionist create
+  const isAdminOrManager = role === "admin" || role === "manager";
 
   const [tasks, setTasks] = useState([]);
   const [rooms, setRooms] = useState([]);
   const [staff, setStaff] = useState([]);
+
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
 
@@ -28,76 +23,55 @@ function Housekeeping() {
   });
 
   const [error, setError] = useState("");
-  const [pageMsg, setPageMsg] = useState("");
 
-  const prettyStatus = useMemo(() => {
-    return (s) => {
-      // UI mapping for housekeeping brief
-      if (s === "pending") return "needs_cleaning";
-      if (s === "in_progress") return "in_progress";
-      if (s === "done") return "done";
-      return s || "—";
-    };
-  }, []);
+  const tasksEndpoint = useMemo(() => {
+    // housekeeping staff should only see their tasks
+    return isHousekeeping ? "/housekeeping/my-tasks" : "/housekeeping/tasks";
+  }, [isHousekeeping]);
 
   const loadData = async () => {
     try {
       setLoading(true);
       setError("");
-      setPageMsg("");
 
-      // ✅ Housekeeping staff: only their tasks (secure backend filter too)
       if (isHousekeeping) {
-        const res = await api.get("/housekeeping/tasks");
-        setTasks(res.data?.tasks || []);
-        setRooms([]);
-        setStaff([]);
+        const taskRes = await api.get(tasksEndpoint);
+        setTasks(taskRes.data.tasks || taskRes.data || []);
         return;
       }
 
-      // ✅ Admin/Manager/Receptionist: all tasks + rooms + staff list (for create/assign)
-      const calls = [api.get("/housekeeping/tasks")];
+      // admin/manager view
+      const [taskRes, roomRes, userRes] = await Promise.all([
+        api.get(tasksEndpoint),
+        api.get("/rooms"),
+        api.get("/users"),
+      ]);
 
-      // Only fetch rooms/users if they can create tasks (avoid extra calls)
-      if (canCreateTask) {
-        calls.push(api.get("/rooms"));
-        calls.push(api.get("/users"));
-      }
+      setTasks(taskRes.data.tasks || taskRes.data || []);
+      setRooms(roomRes.data.rooms || roomRes.data || []);
 
-      const [taskRes, roomRes, userRes] = await Promise.all(calls);
-
-      setTasks(taskRes.data?.tasks || taskRes.data || []);
-
-      if (roomRes) setRooms(roomRes.data?.rooms || roomRes.data || []);
-
-      if (userRes) {
-        const allUsers = userRes.data?.users || userRes.data || [];
-        setStaff(
-          allUsers.filter((u) => u.role === "housekeeping" && u.isActive !== false)
-        );
-      } else {
-        setStaff([]);
-      }
+      const allUsers = userRes.data.users || userRes.data || [];
+      setStaff(
+        allUsers.filter(
+          (u) => u.role === "housekeeping" && u.isActive !== false
+        )
+      );
     } catch (err) {
       console.error("Load housekeeping error", err);
-      setError(err.response?.data?.message || "Failed to load housekeeping data.");
+      setError(err?.response?.data?.message || "Failed to load housekeeping.");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    if (!canAccess) return;
     loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isHousekeeping, canAccess]);
+  }, [tasksEndpoint]);
 
   const handleCreate = async (e) => {
     e.preventDefault();
-    if (!canCreateTask) return;
-
     setError("");
-    setPageMsg("");
 
     if (!form.roomId || !form.description) {
       setError("Room and description are required.");
@@ -114,11 +88,12 @@ function Housekeeping() {
       });
 
       setForm({ roomId: "", description: "", assignedToId: "" });
-      setPageMsg("Task created successfully.");
       await loadData();
     } catch (err) {
       console.error("Create housekeeping task error", err);
-      setError(err.response?.data?.message || "Failed to create housekeeping task.");
+      setError(
+        err.response?.data?.message || "Failed to create housekeeping task."
+      );
     } finally {
       setCreating(false);
     }
@@ -126,39 +101,13 @@ function Housekeeping() {
 
   const updateStatus = async (id, status) => {
     try {
-      setError("");
-      setPageMsg("");
-
       await api.patch(`/housekeeping/tasks/${id}/status`, { status });
-
-      if (status === "in_progress") setPageMsg("Marked as in progress.");
-      if (status === "done") setPageMsg("Marked as done (room set to available).");
-
       await loadData();
     } catch (err) {
       console.error("Update housekeeping status error", err);
-      setError(err.response?.data?.message || "Failed to update task status.");
+      setError(err?.response?.data?.message || "Failed to update task status.");
     }
   };
-
-  if (!canAccess) {
-    return (
-      <div>
-        <h1 style={{ fontSize: 22, marginBottom: 12 }}>Housekeeping</h1>
-        <div
-          style={{
-            padding: 12,
-            borderRadius: 12,
-            background: "#451a1a",
-            color: "#fecaca",
-            fontSize: 13,
-          }}
-        >
-          Access denied.
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div>
@@ -167,27 +116,27 @@ function Housekeeping() {
       </h1>
       <p style={{ fontSize: 13, color: "#9ca3af", marginBottom: 18 }}>
         {isHousekeeping
-          ? "View your assigned rooms, start cleaning and mark tasks done."
-          : "Create and manage housekeeping tasks and room availability."}
+          ? "Work on assigned rooms, start cleaning and mark tasks as done."
+          : "Create and manage cleaning tasks and room readiness."}
       </p>
 
-      {(error || pageMsg) && (
+      {error && (
         <div
           style={{
             marginBottom: 12,
-            padding: 10,
-            borderRadius: 10,
-            background: error ? "#451a1a" : "#052e16",
-            color: error ? "#fecaca" : "#bbf7d0",
+            padding: 8,
+            borderRadius: 8,
+            background: "#451a1a",
+            color: "#fecaca",
             fontSize: 13,
           }}
         >
-          {error || pageMsg}
+          {error}
         </div>
       )}
 
-      {/* ✅ Create task form (admin/manager/receptionist only) */}
-      {canCreateTask && (
+      {/* ✅ Admin/Manager: Create task form */}
+      {!isHousekeeping && (
         <div
           style={{
             marginBottom: 24,
@@ -212,7 +161,9 @@ function Housekeeping() {
             <Field label="Room">
               <select
                 value={form.roomId}
-                onChange={(e) => setForm((f) => ({ ...f, roomId: e.target.value }))}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, roomId: e.target.value }))
+                }
                 style={inputStyle}
               >
                 <option value="">Select room…</option>
@@ -224,7 +175,7 @@ function Housekeeping() {
               </select>
             </Field>
 
-            <Field label="Description / task">
+            <Field label="Description">
               <input
                 value={form.description}
                 onChange={(e) =>
@@ -259,50 +210,44 @@ function Housekeeping() {
         </div>
       )}
 
-      {/* ✅ Role-based table */}
+      {/* Tasks table */}
       {loading ? (
         <div>Loading tasks…</div>
+      ) : tasks.length === 0 ? (
+        <div style={{ color: "#9ca3af", fontSize: 13 }}>
+          No tasks found.
+        </div>
       ) : (
-        <table style={{ width: "100%", fontSize: 13, borderCollapse: "collapse" }}>
+        <table
+          style={{
+            width: "100%",
+            fontSize: 13,
+            borderCollapse: "collapse",
+          }}
+        >
           <thead>
             <tr style={{ borderBottom: "1px solid #1f2937" }}>
-              <Th>Room #</Th>
-              <Th>Tasks / notes</Th>
+              <Th>Room</Th>
+              <Th>{isHousekeeping ? "Tasks / Notes" : "Description"}</Th>
               {!isHousekeeping && <Th>Assigned to</Th>}
               <Th>Status</Th>
               <Th>Actions</Th>
             </tr>
           </thead>
-
           <tbody>
             {tasks.map((t) => (
               <tr key={t._id} style={{ borderBottom: "1px solid #111827" }}>
                 <Td>{t.room?.roomNumber || "—"}</Td>
-
-                <Td>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                    <div>{t.description || "—"}</div>
-                    {t.notes ? (
-                      <div style={{ color: "#9ca3af", fontSize: 12 }}>
-                        Notes: {t.notes}
-                      </div>
-                    ) : null}
-                  </div>
-                </Td>
-
+                <Td>{t.description || t.notes || "—"}</Td>
                 {!isHousekeeping && <Td>{t.assignedTo?.name || "Unassigned"}</Td>}
-
-                <Td style={{ textTransform: "capitalize" }}>
-                  {prettyStatus(t.status)}
-                </Td>
-
+                <Td style={{ textTransform: "capitalize" }}>{t.status}</Td>
                 <Td>
                   {t.status !== "in_progress" && t.status !== "done" && (
                     <button
                       onClick={() => updateStatus(t._id, "in_progress")}
                       style={smallBtn}
                     >
-                      Start cleaning
+                      Start
                     </button>
                   )}{" "}
                   {t.status !== "done" && (
@@ -310,22 +255,21 @@ function Housekeeping() {
                       onClick={() => updateStatus(t._id, "done")}
                       style={smallBtn}
                     >
-                      Mark as done
+                      Mark done
                     </button>
                   )}
                 </Td>
               </tr>
             ))}
-
-            {tasks.length === 0 && (
-              <tr>
-                <td colSpan={isHousekeeping ? 4 : 5} style={{ padding: "10px 6px", color: "#9ca3af" }}>
-                  No tasks found.
-                </td>
-              </tr>
-            )}
           </tbody>
         </table>
+      )}
+
+      {/* small note for admin/manager */}
+      {isAdminOrManager && (
+        <p style={{ marginTop: 12, fontSize: 12, color: "#9ca3af" }}>
+          Tip: Assign tasks to housekeeping staff so they appear in their dashboard.
+        </p>
       )}
     </div>
   );
