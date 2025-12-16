@@ -31,7 +31,6 @@ const bookingSchema = new mongoose.Schema(
       ref: "Room",
       required: true,
     },
-
     checkInDate: {
       type: Date,
       required: true,
@@ -40,37 +39,20 @@ const bookingSchema = new mongoose.Schema(
       type: Date,
       required: true,
     },
-
     numGuests: {
       type: Number,
       default: 1,
     },
-
     status: {
       type: String,
       enum: ["pending", "confirmed", "checked_in", "checked_out", "cancelled"],
       default: "confirmed",
     },
-
-    // ✅ NEW: Digital room key generated on check-in
-    checkInKey: {
-      type: String,
-      trim: true,
-      default: null,
-    },
-
-    // ✅ NEW: Optional expiry (we’ll set it to checkOutDate at check-in, and to now at checkout)
-    keyExpiresAt: {
-      type: Date,
-      default: null,
-    },
-
     totalPrice: {
       type: Number,
       required: true,
       min: 0,
     },
-
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User", // receptionist / manager / admin who created the booking

@@ -17,15 +17,20 @@ const router = express.Router();
 // All booking routes require login
 router.use(protect);
 
-// ✅ Put static routes BEFORE dynamic "/:id"
-router.get("/my", getMyBookings); // GET /api/bookings/my  (guest)
-router.post("/self", createSelfBooking); // Guest self-service booking
+// List and detail
+router.get("/", getBookings);        // GET /api/bookings
+router.get("/:id", getBookingById);  // GET /api/bookings/:id
+router.get("/my", getMyBookings);    // GET /api/bookings/my  (guest)
 
-// List
-router.get("/", getBookings); // GET /api/bookings
+// Guest self-service booking
+router.post("/self", createSelfBooking);
 
 // Create and manage bookings – admin/manager/receptionist
-router.post("/", requireRole("admin", "manager", "receptionist"), createBooking);
+router.post(
+  "/",
+  requireRole("admin", "manager", "receptionist"),
+  createBooking
+);
 
 router.patch(
   "/:id/confirm",
@@ -45,7 +50,24 @@ router.patch(
   checkOutBooking
 );
 
-// Detail (keep at bottom so it doesn't catch /my)
-router.get("/:id", getBookingById); // GET /api/bookings/:id
+
+// Create and manage bookings – admin/manager/receptionist
+router.post(
+  "/",
+  requireRole("admin", "manager", "receptionist"),
+  createBooking
+);
+
+router.patch(
+  "/:id/checkin",
+  requireRole("admin", "manager", "receptionist"),
+  checkInBooking
+);
+
+router.patch(
+  "/:id/checkout",
+  requireRole("admin", "manager", "receptionist"),
+  checkOutBooking
+);
 
 module.exports = router;
